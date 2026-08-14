@@ -1,0 +1,13 @@
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+#player {
+  flex: 2;
+}
+
+#panel {
+  flex: 1;
+  overflow-y: auto;
+}

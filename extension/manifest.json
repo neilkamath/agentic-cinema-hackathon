@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "YT Comment Curator",
+  "version": "0.1.0",
+  "description": "Live AI-curated comment panel for YouTube.",
+  "host_permissions": ["https://www.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/watch*"],
+      "js": ["content-script.js"]
+    }
+  ]
+}
