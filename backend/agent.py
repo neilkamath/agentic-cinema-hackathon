@@ -17,11 +17,13 @@ For every comment, decide:
 - score (0-100): how insightful, thoughtful, funny, or otherwise valuable the comment is to someone reading the comments. Low-effort but genuine reactions ("great video!") should score low, not be filtered out.
 - filter_out (true/false): true only if the comment is spam, a bot/scam/ad comment, or a near-duplicate of another comment in this same list. Otherwise false.
 - needs_grounding (true/false): true only if the comment makes a specific, checkable factual claim about the real world (a fact, event, date, or quote that could be verified). False for opinions, jokes, or reactions.
+- search_objective: if needs_grounding is true, a self-contained one-sentence description of the specific claim to verify (include enough context to search for it standalone - the comment text alone may be ambiguous). Otherwise null.
+- search_queries: if needs_grounding is true, 2-3 concise web search queries (3-6 words each) that would help verify the claim. Otherwise null.
 
 Comments (tab-separated: id, author, like count, text):
 {comments}
 
-Return a JSON array with exactly one object per comment id above, each with fields: id, score, filter_out, needs_grounding."""
+Return a JSON array with exactly one object per comment id above, each with fields: id, score, filter_out, needs_grounding, search_objective, search_queries."""
 
 
 class _RankedComment(BaseModel):
@@ -29,6 +31,8 @@ class _RankedComment(BaseModel):
     score: int
     filter_out: bool
     needs_grounding: bool
+    search_objective: str | None = None
+    search_queries: list[str] | None = None
 
 
 _ranked_list_adapter = TypeAdapter(list[_RankedComment])
@@ -52,7 +56,13 @@ async def rank_comments(comments: list[dict]) -> list[dict]:
     rankings = {r.id: r for r in _ranked_list_adapter.validate_json(resp.text)}
 
     ranked = [
-        {**c, "score": rankings[c["id"]].score, "needs_grounding": rankings[c["id"]].needs_grounding}
+        {
+            **c,
+            "score": rankings[c["id"]].score,
+            "needs_grounding": rankings[c["id"]].needs_grounding,
+            "search_objective": rankings[c["id"]].search_objective,
+            "search_queries": rankings[c["id"]].search_queries,
+        }
         for c in comments
         if c["id"] in rankings and not rankings[c["id"]].filter_out
     ]
