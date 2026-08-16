@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from agent import rank_comments
-from youtube import fetch_comments, fetch_comments_since
+from factcards import generate_fact_cards
+from youtube import fetch_comments, fetch_comments_since, fetch_video_metadata
 
 app = FastAPI()
 app.add_middleware(
@@ -49,3 +50,10 @@ async def poll_comments(video_id: str, body: PollRequest):
     ranked = await rank_comments(new_comments, context=context)
     cursor = max(c["published_at"] for c in new_comments)
     return {"comments": ranked, "cursor": cursor}
+
+
+@app.get("/video/{video_id}/facts")
+async def get_facts(video_id: str):
+    metadata = await anyio.to_thread.run_sync(fetch_video_metadata, video_id)
+    facts = await generate_fact_cards(metadata["title"], metadata["description"])
+    return {"video_id": video_id, "facts": facts}

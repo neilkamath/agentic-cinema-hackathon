@@ -4,6 +4,7 @@ import requests
 
 YOUTUBE_API_KEY = os.environ["YOUTUBE_API_KEY"]
 COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
+VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 
 
 def _parse_item(item: dict) -> dict:
@@ -15,6 +16,20 @@ def _parse_item(item: dict) -> dict:
         "like_count": snippet["likeCount"],
         "published_at": snippet["publishedAt"],
     }
+
+
+def fetch_video_metadata(video_id: str) -> dict:
+    resp = requests.get(
+        VIDEOS_URL,
+        params={"part": "snippet", "id": video_id, "key": YOUTUBE_API_KEY},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    items = resp.json()["items"]
+    if not items:
+        raise ValueError(f"video not found: {video_id}")
+    snippet = items[0]["snippet"]
+    return {"title": snippet["title"], "description": snippet.get("description", "")}
 
 
 def fetch_comments(video_id: str, max_results: int = 100) -> list[dict]:
