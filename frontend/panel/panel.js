@@ -11,6 +11,8 @@ const ICONS = {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>',
   externalLink:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+  arrowDown:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>',
 };
 
 function scoreToOpacity(score) {
@@ -115,6 +117,25 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, onMe
   list.className = "comment-list";
   container.appendChild(list);
 
+  // Overlaid on the panel's non-scrolling parent, not `container` itself -
+  // an absolutely positioned child of the scroll container would scroll away
+  // with the content instead of floating in place like Twitch/YouTube's
+  // "jump to current" pill does.
+  const jumpButton = document.createElement("button");
+  jumpButton.type = "button";
+  jumpButton.className = "jump-to-current";
+  jumpButton.innerHTML = `${ICONS.arrowDown}<span>Jump to current</span>`;
+  jumpButton.addEventListener("click", () => {
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  });
+  (container.parentElement || container).appendChild(jumpButton);
+
+  function updateJumpButtonVisibility() {
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    jumpButton.classList.toggle("visible", distanceFromBottom > SCROLL_BOTTOM_THRESHOLD);
+  }
+  container.addEventListener("scroll", updateJumpButtonVisibility);
+
   const state = {
     comments: [],
     facts: [],
@@ -177,6 +198,7 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, onMe
     }
 
     container.scrollTop = wasPinnedToBottom ? container.scrollHeight : previousScrollTop;
+    updateJumpButtonVisibility();
   }
 
   function tickReveal() {
@@ -248,5 +270,7 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, onMe
   return () => {
     if (state.pollTimer) clearTimeout(state.pollTimer);
     if (state.revealTimer) clearInterval(state.revealTimer);
+    container.removeEventListener("scroll", updateJumpButtonVisibility);
+    jumpButton.remove();
   };
 }

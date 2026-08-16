@@ -251,3 +251,38 @@ body {
 .fact-source:hover {
   text-decoration: underline;
 }
+
+.jump-to-current {
+  position: absolute;
+  bottom: var(--size-4);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-round);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.2s var(--ease-2), transform 0.2s var(--ease-2);
+}
+
+.jump-to-current.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.jump-to-current svg {
+  width: 14px;
+  height: 14px;
+}
