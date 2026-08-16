@@ -132,7 +132,7 @@ export function mountPanel(container, { videoId, getPlaybackState }) {
     buildSequence();
     const fraction = Math.min(1, Math.max(0, playback.currentTime / playback.duration));
     const target = Math.floor(fraction * state.sequence.length);
-    if (target > state.revealedCount) {
+    if (target !== state.revealedCount) {
       state.revealedCount = target;
       render();
     }
