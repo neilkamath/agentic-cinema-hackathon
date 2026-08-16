@@ -30,4 +30,10 @@ function getPlaybackState() {
   return { currentTime: player.getCurrentTime(), duration };
 }
 
-mountPanel(document.getElementById("panel"), { videoId, getPlaybackState });
+mountPanel(document.getElementById("panel"), {
+  videoId,
+  getPlaybackState,
+  onReady: () => {
+    document.getElementById("loading-overlay").classList.add("hidden");
+  },
+});

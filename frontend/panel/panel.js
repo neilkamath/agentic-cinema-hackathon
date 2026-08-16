@@ -91,7 +91,7 @@ function renderFactCard(fact) {
   return row;
 }
 
-export function mountPanel(container, { videoId, getPlaybackState }) {
+export function mountPanel(container, { videoId, getPlaybackState, onReady }) {
   container.innerHTML = "";
   const list = document.createElement("div");
   list.className = "comment-list";
@@ -221,6 +221,7 @@ export function mountPanel(container, { videoId, getPlaybackState }) {
 
     state.revealTimer = setInterval(tickReveal, REVEAL_TICK_MS);
     schedulePoll();
+    onReady?.();
   }
 
   loadInitial();
