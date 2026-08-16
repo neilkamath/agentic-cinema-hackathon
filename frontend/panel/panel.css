@@ -1,6 +1,7 @@
 #app {
   display: flex;
   height: 100vh;
+  background: #0f0f0f;
 }
 
 #player {
@@ -10,4 +11,70 @@
 #panel {
   flex: 1;
   overflow-y: auto;
+  border-left: 1px solid #303030;
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.loading {
+  padding: 14px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.comment {
+  padding: 10px 14px;
+  border-bottom: 1px solid #272727;
+  transition: opacity 0.2s ease;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.author {
+  font-weight: 600;
+  font-size: 13px;
+  color: #f1f1f1;
+}
+
+.likes {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.comment-text {
+  font-size: 13px;
+  color: #e1e1e1;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.badge.confirmed {
+  background: #14532d;
+  color: #86efac;
+}
+
+.badge.disputed {
+  background: #7f1d1d;
+  color: #fca5a5;
 }
