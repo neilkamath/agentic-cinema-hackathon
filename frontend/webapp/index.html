@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>YT Comment Curator</title>
+  <title>Learn-Stream</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+  />
+  <link rel="stylesheet" href="https://unpkg.com/open-props" />
   <link rel="stylesheet" href="../panel/panel.css" />
 </head>
 <body>
@@ -13,8 +20,17 @@
         <div class="loading-overlay-text">Setting up Learn-Stream…</div>
       </div>
     </div>
-    <div id="player"></div>
-    <div id="panel"></div>
+    <div id="main">
+      <div id="video-header">
+        <div id="video-title"></div>
+        <div id="video-channel"></div>
+      </div>
+      <div id="player"></div>
+    </div>
+    <div id="chat-column">
+      <div class="chat-label">Streamed Chat</div>
+      <div id="panel"></div>
+    </div>
   </div>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script type="module" src="app.js"></script>

@@ -6,6 +6,13 @@ const POLL_INTERVAL_MS = 15000;
 const TOP_SAMPLE_SIZE = 15;
 const SCROLL_BOTTOM_THRESHOLD = 24;
 
+const ICONS = {
+  thumbsUp:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>',
+  externalLink:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+};
+
 function scoreToOpacity(score) {
   const clamped = Math.max(0, Math.min(100, score));
   return 0.35 + (clamped / 100) * 0.65;
@@ -36,6 +43,15 @@ function renderComment(comment) {
   row.className = "comment";
   row.style.opacity = scoreToOpacity(comment.score);
 
+  const avatar = document.createElement("img");
+  avatar.className = "avatar";
+  avatar.src = comment.author_avatar_url;
+  avatar.alt = "";
+  row.appendChild(avatar);
+
+  const body = document.createElement("div");
+  body.className = "comment-body";
+
   const header = document.createElement("div");
   header.className = "comment-header";
 
@@ -49,17 +65,19 @@ function renderComment(comment) {
   postedAt.textContent = formatRelativeTime(comment.published_at);
   header.appendChild(postedAt);
 
-  const likes = document.createElement("span");
-  likes.className = "likes";
-  likes.textContent = `${comment.like_count} likes`;
-  header.appendChild(likes);
-
-  row.appendChild(header);
+  body.appendChild(header);
 
   const text = document.createElement("div");
   text.className = "comment-text";
   text.textContent = comment.text;
-  row.appendChild(text);
+  body.appendChild(text);
+
+  const likes = document.createElement("span");
+  likes.className = "likes";
+  likes.innerHTML = `${ICONS.thumbsUp}<span>${comment.like_count}</span>`;
+  body.appendChild(likes);
+
+  row.appendChild(body);
 
   return row;
 }
@@ -84,14 +102,14 @@ function renderFactCard(fact) {
     source.href = fact.source_url;
     source.target = "_blank";
     source.rel = "noopener";
-    source.textContent = "source";
+    source.innerHTML = `<span>source</span>${ICONS.externalLink}`;
     row.appendChild(source);
   }
 
   return row;
 }
 
-export function mountPanel(container, { videoId, getPlaybackState, onReady }) {
+export function mountPanel(container, { videoId, getPlaybackState, onReady, onMeta }) {
   container.innerHTML = "";
   const list = document.createElement("div");
   list.className = "comment-list";
@@ -221,6 +239,7 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady }) {
 
     state.revealTimer = setInterval(tickReveal, REVEAL_TICK_MS);
     schedulePoll();
+    onMeta?.({ title: factsData.title, channelTitle: factsData.channel_title });
     onReady?.();
   }
 

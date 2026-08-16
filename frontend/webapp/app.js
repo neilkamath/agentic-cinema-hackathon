@@ -33,6 +33,10 @@ function getPlaybackState() {
 mountPanel(document.getElementById("panel"), {
   videoId,
   getPlaybackState,
+  onMeta: ({ title, channelTitle }) => {
+    document.getElementById("video-title").textContent = title;
+    document.getElementById("video-channel").textContent = channelTitle;
+  },
   onReady: () => {
     document.getElementById("loading-overlay").classList.add("hidden");
   },
