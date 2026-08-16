@@ -30,6 +30,44 @@ function getPlaybackState() {
   return { currentTime: player.getCurrentTime(), duration };
 }
 
+function setupResizableDivider() {
+  const app = document.getElementById("app");
+  const chatColumn = document.getElementById("chat-column");
+  const divider = document.getElementById("divider");
+
+  const MIN_MAIN_WIDTH = 360;
+  const MIN_CHAT_WIDTH = 280;
+  let dragging = false;
+
+  divider.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    divider.classList.add("dragging");
+    divider.setPointerCapture(e.pointerId);
+    document.body.style.userSelect = "none";
+  });
+
+  divider.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const appRect = app.getBoundingClientRect();
+    const dividerWidth = divider.getBoundingClientRect().width;
+    const maxChatWidth = appRect.width - MIN_MAIN_WIDTH - dividerWidth;
+    const rawChatWidth = appRect.right - e.clientX;
+    const chatWidth = Math.min(maxChatWidth, Math.max(MIN_CHAT_WIDTH, rawChatWidth));
+    chatColumn.style.width = `${chatWidth}px`;
+  });
+
+  function stopDragging() {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove("dragging");
+    document.body.style.userSelect = "";
+  }
+  divider.addEventListener("pointerup", stopDragging);
+  divider.addEventListener("pointercancel", stopDragging);
+}
+
+setupResizableDivider();
+
 mountPanel(document.getElementById("panel"), {
   videoId,
   getPlaybackState,

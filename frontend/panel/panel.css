@@ -72,10 +72,29 @@ body {
 }
 
 #main {
-  flex: 2;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-width: 360px;
+}
+
+#divider {
+  flex: 0 0 6px;
+  position: relative;
+  cursor: col-resize;
+}
+
+#divider::after {
+  content: "";
+  position: absolute;
+  inset: 0 2px;
+  background: #303030;
+  transition: background 0.15s ease;
+}
+
+#divider:hover::after,
+#divider.dragging::after {
+  background: var(--accent);
 }
 
 #video-header {
@@ -104,11 +123,11 @@ body {
 
 #chat-column {
   position: relative;
-  flex: 1;
+  flex: 0 0 auto;
+  width: 380px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  border-left: 1px solid #303030;
 }
 
 .chat-label {
