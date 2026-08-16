@@ -57,24 +57,40 @@
   overflow-wrap: anywhere;
 }
 
-.badge {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 600;
+.fact-card {
+  padding: 10px 14px;
+  border-bottom: 1px solid #272727;
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.14), rgba(124, 92, 255, 0.05));
+  border-left: 3px solid #7c5cff;
+}
+
+.fact-label {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
+  color: #c4b5fd;
+  background: rgba(124, 92, 255, 0.2);
   padding: 2px 8px;
   border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.fact-text {
+  font-size: 13px;
+  color: #ede9fe;
+  line-height: 1.4;
+}
+
+.fact-source {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #c4b5fd;
   text-decoration: none;
-  white-space: nowrap;
 }
 
-.badge.confirmed {
-  background: #14532d;
-  color: #86efac;
-}
-
-.badge.disputed {
-  background: #7f1d1d;
-  color: #fca5a5;
+.fact-source:hover {
+  text-decoration: underline;
 }

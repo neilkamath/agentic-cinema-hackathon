@@ -4,8 +4,10 @@ const DEFAULT_VIDEO_ID = "dQw4w9WgXcQ";
 const params = new URLSearchParams(location.search);
 const videoId = params.get("v") || DEFAULT_VIDEO_ID;
 
+let player = null;
+
 function createPlayer() {
-  new YT.Player("player", {
+  player = new YT.Player("player", {
     videoId,
     width: "100%",
     height: "100%",
@@ -21,4 +23,11 @@ if (window.YT && window.YT.Player) {
   window.onYouTubeIframeAPIReady = createPlayer;
 }
 
-mountPanel(document.getElementById("panel"), { videoId });
+function getPlaybackState() {
+  if (!player || typeof player.getDuration !== "function") return null;
+  const duration = player.getDuration();
+  if (!duration) return null;
+  return { currentTime: player.getCurrentTime(), duration };
+}
+
+mountPanel(document.getElementById("panel"), { videoId, getPlaybackState });

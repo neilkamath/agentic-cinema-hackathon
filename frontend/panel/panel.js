@@ -1,6 +1,8 @@
 const DEFAULT_API_BASE = "https://yt-curator-backend-659579556690.us-central1.run.app";
 const API_BASE = new URLSearchParams(location.search).get("api") || DEFAULT_API_BASE;
 
+const REVEAL_TICK_MS = 1000;
+const FACT_CARD_INTERVAL = 6;
 const POLL_INTERVAL_MS = 15000;
 const TOP_SAMPLE_SIZE = 15;
 const SCROLL_TOP_THRESHOLD = 8;
@@ -28,17 +30,6 @@ function renderComment(comment) {
   likes.textContent = `${comment.like_count} likes`;
   header.appendChild(likes);
 
-  if (comment.grounding_status) {
-    const badge = document.createElement("a");
-    badge.className = `badge ${comment.grounding_status}`;
-    badge.href = comment.grounding_url || "#";
-    badge.target = "_blank";
-    badge.rel = "noopener";
-    badge.title = comment.grounding_excerpt || "";
-    badge.textContent = comment.grounding_status === "confirmed" ? "confirmed" : "disputed";
-    header.appendChild(badge);
-  }
-
   row.appendChild(header);
 
   const text = document.createElement("div");
@@ -49,34 +40,98 @@ function renderComment(comment) {
   return row;
 }
 
-export function mountPanel(container, { videoId }) {
+function renderFactCard(fact) {
+  const row = document.createElement("div");
+  row.className = "fact-card";
+
+  const label = document.createElement("div");
+  label.className = "fact-label";
+  label.textContent = "AI Insight";
+  row.appendChild(label);
+
+  const text = document.createElement("div");
+  text.className = "fact-text";
+  text.textContent = fact.text;
+  row.appendChild(text);
+
+  if (fact.source_url) {
+    const source = document.createElement("a");
+    source.className = "fact-source";
+    source.href = fact.source_url;
+    source.target = "_blank";
+    source.rel = "noopener";
+    source.textContent = "source";
+    row.appendChild(source);
+  }
+
+  return row;
+}
+
+export function mountPanel(container, { videoId, getPlaybackState }) {
   container.innerHTML = "";
   const list = document.createElement("div");
   list.className = "comment-list";
   container.appendChild(list);
 
-  const state = { comments: [], cursor: null, pollTimer: null };
+  const state = {
+    comments: [],
+    facts: [],
+    sequence: [],
+    revealedCount: 0,
+    cursor: null,
+    pollTimer: null,
+    revealTimer: null,
+  };
 
   const loading = document.createElement("div");
   loading.className = "loading";
   loading.textContent = "Loading comments…";
   list.appendChild(loading);
 
+  function buildSequence() {
+    const seq = [];
+    let factIdx = 0;
+    state.comments.forEach((comment, i) => {
+      seq.push({ type: "comment", data: comment });
+      if ((i + 1) % FACT_CARD_INTERVAL === 0 && factIdx < state.facts.length) {
+        seq.push({ type: "fact", data: state.facts[factIdx] });
+        factIdx++;
+      }
+    });
+    state.sequence = seq;
+  }
+
   function render() {
     const wasPinnedToTop = list.scrollTop <= SCROLL_TOP_THRESHOLD;
     const previousScrollTop = list.scrollTop;
 
     list.innerHTML = "";
-    for (const comment of state.comments) {
-      list.appendChild(renderComment(comment));
+    const visible = state.sequence.slice(0, state.revealedCount);
+    if (!visible.length) {
+      const hint = document.createElement("div");
+      hint.className = "loading";
+      hint.textContent = "Comments will appear as you watch…";
+      list.appendChild(hint);
+    } else {
+      for (const item of visible) {
+        list.appendChild(item.type === "fact" ? renderFactCard(item.data) : renderComment(item.data));
+      }
     }
 
     list.scrollTop = wasPinnedToTop ? 0 : previousScrollTop;
   }
 
-  function mergeNewComments(newComments) {
-    state.comments.push(...newComments);
-    state.comments.sort((a, b) => b.score - a.score);
+  function tickReveal() {
+    const playback = getPlaybackState ? getPlaybackState() : null;
+    if (!playback || !playback.duration) return;
+
+    buildSequence();
+    const fraction = Math.min(1, Math.max(0, playback.currentTime / playback.duration));
+    const target = Math.floor(fraction * state.sequence.length);
+    if (target > state.revealedCount) {
+      state.revealedCount = target;
+      render();
+    }
   }
 
   function schedulePoll() {
@@ -97,8 +152,8 @@ export function mountPanel(container, { videoId }) {
       });
       const data = await res.json();
       if (data.comments.length) {
-        mergeNewComments(data.comments);
-        render();
+        state.comments.push(...data.comments);
+        state.comments.sort((a, b) => b.score - a.score);
       }
       if (data.cursor) {
         state.cursor = data.cursor;
@@ -111,11 +166,20 @@ export function mountPanel(container, { videoId }) {
   }
 
   async function loadInitial() {
-    const res = await fetch(`${API_BASE}/comments/${videoId}`);
-    const data = await res.json();
-    state.comments = data.comments;
-    state.cursor = data.cursor;
+    const [commentsRes, factsRes] = await Promise.all([
+      fetch(`${API_BASE}/comments/${videoId}`),
+      fetch(`${API_BASE}/video/${videoId}/facts`),
+    ]);
+    const commentsData = await commentsRes.json();
+    const factsData = await factsRes.json();
+
+    state.comments = commentsData.comments;
+    state.cursor = commentsData.cursor;
+    state.facts = factsData.facts;
+    buildSequence();
     render();
+
+    state.revealTimer = setInterval(tickReveal, REVEAL_TICK_MS);
     schedulePoll();
   }
 
@@ -123,5 +187,6 @@ export function mountPanel(container, { videoId }) {
 
   return () => {
     if (state.pollTimer) clearTimeout(state.pollTimer);
+    if (state.revealTimer) clearInterval(state.revealTimer);
   };
 }
