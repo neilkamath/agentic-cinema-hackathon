@@ -5,7 +5,7 @@ const REVEAL_TICK_MS = 1000;
 const FACT_CARD_INTERVAL = 6;
 const POLL_INTERVAL_MS = 15000;
 const TOP_SAMPLE_SIZE = 15;
-const SCROLL_TOP_THRESHOLD = 8;
+const SCROLL_BOTTOM_THRESHOLD = 24;
 
 function scoreToOpacity(score) {
   const clamped = Math.max(0, Math.min(100, score));
@@ -102,8 +102,12 @@ export function mountPanel(container, { videoId, getPlaybackState }) {
   }
 
   function render() {
-    const wasPinnedToTop = list.scrollTop <= SCROLL_TOP_THRESHOLD;
-    const previousScrollTop = list.scrollTop;
+    // `container` (#panel) is the actual scroll container (overflow-y: auto in
+    // panel.css) - `list` just grows unconstrained inside it, so scroll position
+    // must be read/written on `container`, not `list`.
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const wasPinnedToBottom = distanceFromBottom <= SCROLL_BOTTOM_THRESHOLD;
+    const previousScrollTop = container.scrollTop;
 
     list.innerHTML = "";
     const visible = state.sequence.slice(0, state.revealedCount);
@@ -118,7 +122,7 @@ export function mountPanel(container, { videoId, getPlaybackState }) {
       }
     }
 
-    list.scrollTop = wasPinnedToTop ? 0 : previousScrollTop;
+    container.scrollTop = wasPinnedToBottom ? container.scrollHeight : previousScrollTop;
   }
 
   function tickReveal() {
