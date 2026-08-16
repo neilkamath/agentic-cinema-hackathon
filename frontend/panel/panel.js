@@ -11,6 +11,26 @@ function scoreToOpacity(score) {
   return 0.35 + (clamped / 100) * 0.65;
 }
 
+const RELATIVE_TIME_UNITS = [
+  ["year", 31536000],
+  ["month", 2592000],
+  ["week", 604800],
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+function formatRelativeTime(isoString) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
+  for (const [name, secondsInUnit] of RELATIVE_TIME_UNITS) {
+    const value = Math.floor(seconds / secondsInUnit);
+    if (value >= 1) {
+      return `${value} ${name}${value > 1 ? "s" : ""} ago`;
+    }
+  }
+  return "just now";
+}
+
 function renderComment(comment) {
   const row = document.createElement("div");
   row.className = "comment";
@@ -23,6 +43,11 @@ function renderComment(comment) {
   author.className = "author";
   author.textContent = comment.author;
   header.appendChild(author);
+
+  const postedAt = document.createElement("span");
+  postedAt.className = "posted-at";
+  postedAt.textContent = formatRelativeTime(comment.published_at);
+  header.appendChild(postedAt);
 
   const likes = document.createElement("span");
   likes.className = "likes";
