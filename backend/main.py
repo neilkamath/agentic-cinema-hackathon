@@ -56,4 +56,9 @@ async def poll_comments(video_id: str, body: PollRequest):
 async def get_facts(video_id: str):
     metadata = await anyio.to_thread.run_sync(fetch_video_metadata, video_id)
     facts = await generate_fact_cards(metadata["title"], metadata["description"])
-    return {"video_id": video_id, "facts": facts}
+    return {
+        "video_id": video_id,
+        "title": metadata["title"],
+        "channel_title": metadata["channel_title"],
+        "facts": facts,
+    }

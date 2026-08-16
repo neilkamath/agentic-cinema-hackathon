@@ -12,6 +12,7 @@ def _parse_item(item: dict) -> dict:
     return {
         "id": item["id"],
         "author": snippet["authorDisplayName"],
+        "author_avatar_url": snippet["authorProfileImageUrl"],
         "text": snippet["textDisplay"],
         "like_count": snippet["likeCount"],
         "published_at": snippet["publishedAt"],
@@ -29,7 +30,11 @@ def fetch_video_metadata(video_id: str) -> dict:
     if not items:
         raise ValueError(f"video not found: {video_id}")
     snippet = items[0]["snippet"]
-    return {"title": snippet["title"], "description": snippet.get("description", "")}
+    return {
+        "title": snippet["title"],
+        "description": snippet.get("description", ""),
+        "channel_title": snippet.get("channelTitle", ""),
+    }
 
 
 def fetch_comments(video_id: str, max_results: int = 100) -> list[dict]:
