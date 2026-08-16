@@ -2,7 +2,6 @@ const DEFAULT_API_BASE = "https://yt-curator-backend-659579556690.us-central1.ru
 const API_BASE = new URLSearchParams(location.search).get("api") || DEFAULT_API_BASE;
 
 const REVEAL_TICK_MS = 1000;
-const FACT_CARD_INTERVAL = 6;
 const POLL_INTERVAL_MS = 15000;
 const TOP_SAMPLE_SIZE = 15;
 const SCROLL_BOTTOM_THRESHOLD = 24;
@@ -90,14 +89,26 @@ export function mountPanel(container, { videoId, getPlaybackState }) {
 
   function buildSequence() {
     const seq = [];
+    const totalComments = state.comments.length;
+    const numFacts = state.facts.length;
     let factIdx = 0;
+
     state.comments.forEach((comment, i) => {
       seq.push({ type: "comment", data: comment });
-      if ((i + 1) % FACT_CARD_INTERVAL === 0 && factIdx < state.facts.length) {
+      // Spread facts evenly across the whole comment list rather than a fixed
+      // interval, which would cluster them all near the front once the (much
+      // smaller) fact pool runs out. A `while`, not `if`, so a video with very
+      // few comments still surfaces every fact instead of silently dropping some.
+      while (factIdx < numFacts && (factIdx + 1) / (numFacts + 1) <= (i + 1) / totalComments) {
         seq.push({ type: "fact", data: state.facts[factIdx] });
         factIdx++;
       }
     });
+    while (factIdx < numFacts) {
+      seq.push({ type: "fact", data: state.facts[factIdx] });
+      factIdx++;
+    }
+
     state.sequence = seq;
   }
 
