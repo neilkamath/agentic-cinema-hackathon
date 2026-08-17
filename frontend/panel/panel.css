@@ -130,7 +130,11 @@ body {
   flex-direction: column;
 }
 
-.chat-label {
+.panel-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2);
   padding: var(--size-3) var(--size-4);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -159,12 +163,38 @@ body {
   color: #aaa;
 }
 
+.summary-card {
+  padding: var(--size-4);
+  border-bottom: 1px solid #272727;
+  background: #161616;
+}
+
+.summary-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8a8a8a;
+  margin-bottom: var(--size-2);
+}
+
+.summary-text {
+  font-size: 13px;
+  color: #e1e1e1;
+  line-height: 1.5;
+}
+
+.comment-feed {
+  display: flex;
+  flex-direction: column;
+}
+
 .comment {
   display: flex;
   gap: var(--size-3);
   padding: var(--size-2) var(--size-4);
   border-bottom: 1px solid #1e1e1e;
-  transition: opacity 0.2s var(--ease-2);
 }
 
 .avatar {
@@ -224,15 +254,17 @@ body {
   height: 13px;
 }
 
-.fact-card {
+.insight-card {
   padding: var(--size-2) var(--size-4);
   border-bottom: 1px solid #1e1e1e;
   background: var(--accent-soft);
   border-left: 3px solid var(--accent);
 }
 
-.fact-label {
-  display: inline-block;
+.insight-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
@@ -245,13 +277,36 @@ body {
   margin-bottom: var(--size-1);
 }
 
-.fact-text {
+.insight-label svg {
+  width: 11px;
+  height: 11px;
+}
+
+.insight-headline {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f1f1;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.insight-video-reference {
+  font-size: 11px;
+  font-style: italic;
+  color: #8a8a8a;
+  line-height: 1.4;
+  margin-bottom: var(--size-2);
+  padding-left: 6px;
+  border-left: 2px solid var(--accent-border);
+}
+
+.insight-text {
   font-size: 13px;
   color: #ede9fe;
   line-height: 1.4;
 }
 
-.fact-source {
+.insight-source {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -262,12 +317,12 @@ body {
   text-decoration: none;
 }
 
-.fact-source svg {
+.insight-source svg {
   width: 12px;
   height: 12px;
 }
 
-.fact-source:hover {
+.insight-source:hover {
   text-decoration: underline;
 }
 
