@@ -1,4 +1,4 @@
-import { mountPanel } from "../panel/panel.js";
+import { mountPanel, API_BASE } from "../panel/panel.js";
 
 const DEFAULT_VIDEO_ID = "dQw4w9WgXcQ";
 const params = new URLSearchParams(location.search);
@@ -30,7 +30,7 @@ function getPlaybackState() {
   return { currentTime: player.getCurrentTime(), duration };
 }
 
-function setupResizableDivider() {
+function setupResizableDivider(panelHandle) {
   const app = document.getElementById("app");
   const chatColumn = document.getElementById("chat-column");
   const divider = document.getElementById("divider");
@@ -44,6 +44,10 @@ function setupResizableDivider() {
     divider.classList.add("dragging");
     divider.setPointerCapture(e.pointerId);
     document.body.style.userSelect = "none";
+    // Resizing reflows comment/insight text, which can shrink the panel's
+    // scrollHeight enough that the browser clamps scrollTop on its own -
+    // that's not the viewer scrolling, so don't let it pause/resume the chat.
+    panelHandle?.setScrollSuspended(true);
   });
 
   divider.addEventListener("pointermove", (e) => {
@@ -61,21 +65,30 @@ function setupResizableDivider() {
     dragging = false;
     divider.classList.remove("dragging");
     document.body.style.userSelect = "";
+    panelHandle?.setScrollSuspended(false);
   }
   divider.addEventListener("pointerup", stopDragging);
   divider.addEventListener("pointercancel", stopDragging);
 }
 
-setupResizableDivider();
+async function loadVideoMeta() {
+  const res = await fetch(`${API_BASE}/video/${videoId}/insights`);
+  const data = await res.json();
 
-mountPanel(document.getElementById("panel"), {
-  videoId,
-  getPlaybackState,
-  onMeta: ({ title, channelTitle }) => {
-    document.getElementById("video-title").textContent = title;
-    document.getElementById("video-channel").textContent = channelTitle;
-  },
-  onReady: () => {
-    document.getElementById("loading-overlay").classList.add("hidden");
-  },
-});
+  document.getElementById("video-title").textContent = data.title;
+  document.getElementById("video-channel").textContent = data.channel_title;
+
+  const panelHandle = mountPanel(document.getElementById("panel"), {
+    videoId,
+    getPlaybackState,
+    summary: data.summary,
+    insights: data.insights,
+    onReady: () => {
+      document.getElementById("loading-overlay").classList.add("hidden");
+    },
+  });
+
+  setupResizableDivider(panelHandle);
+}
+
+loadVideoMeta();
