@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from agent import rank_comments
-from factcards import generate_fact_cards
+from insights import generate_insights
+from transcript import chunk_transcript, fetch_transcript
 from youtube import fetch_comments, fetch_comments_since, fetch_video_metadata
 
 app = FastAPI()
@@ -16,15 +16,8 @@ app.add_middleware(
 )
 
 
-class TopSampleItem(BaseModel):
-    id: str
-    text: str
-    score: int
-
-
 class PollRequest(BaseModel):
     after: str | None = None
-    top_sample: list[TopSampleItem] = []
 
 
 @app.get("/health")
@@ -35,9 +28,8 @@ def health():
 @app.get("/comments/{video_id}")
 async def get_comments(video_id: str):
     comments = await anyio.to_thread.run_sync(fetch_comments, video_id)
-    ranked = await rank_comments(comments)
     cursor = max((c["published_at"] for c in comments), default=None)
-    return {"video_id": video_id, "comments": ranked, "cursor": cursor}
+    return {"video_id": video_id, "comments": comments, "cursor": cursor}
 
 
 @app.post("/comments/{video_id}/poll")
@@ -46,19 +38,20 @@ async def poll_comments(video_id: str, body: PollRequest):
     if not new_comments:
         return {"comments": [], "cursor": body.after}
 
-    context = [item.model_dump() for item in body.top_sample]
-    ranked = await rank_comments(new_comments, context=context)
     cursor = max(c["published_at"] for c in new_comments)
-    return {"comments": ranked, "cursor": cursor}
+    return {"comments": new_comments, "cursor": cursor}
 
 
-@app.get("/video/{video_id}/facts")
-async def get_facts(video_id: str):
+@app.get("/video/{video_id}/insights")
+async def get_insights(video_id: str):
     metadata = await anyio.to_thread.run_sync(fetch_video_metadata, video_id)
-    facts = await generate_fact_cards(metadata["title"], metadata["description"])
+    segments = await anyio.to_thread.run_sync(fetch_transcript, video_id)
+    transcript_chunks = chunk_transcript(segments) if segments else None
+    result = await generate_insights(metadata["title"], metadata["description"], transcript_chunks)
     return {
         "video_id": video_id,
         "title": metadata["title"],
         "channel_title": metadata["channel_title"],
-        "facts": facts,
+        "summary": result["summary"],
+        "insights": result["insights"],
     }
