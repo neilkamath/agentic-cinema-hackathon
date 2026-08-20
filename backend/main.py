@@ -1,3 +1,10 @@
+from dotenv import load_dotenv
+
+# Must run before the env-reading imports below - local dev sources secrets
+# from this file, and it needs to be loaded in-process (not just exported in
+# the launching shell) so uvicorn's --reload respawns still see it.
+load_dotenv()
+
 import anyio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
