@@ -7,20 +7,33 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Literal
 
-from google import genai
+from google.adk import Runner
+from google.adk.agents import LlmAgent
+from google.adk.models import Gemini
+from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from parallel import AsyncParallel
 from pydantic import BaseModel, TypeAdapter
 
 _log = logging.getLogger(__name__)
 
-_gemini = genai.Client(
-    vertexai=True,
-    project=os.environ["GCP_PROJECT"],
-    location=os.environ["GCP_LOCATION"],
-)
-_parallel = AsyncParallel(api_key=os.environ["PARALLEL_API_KEY"])
 _MODEL = "gemini-2.5-flash"
+# ADK's Gemini model doesn't expose vertexai/project/location directly -
+# client_kwargs is its documented escape hatch for options passed straight
+# through to the underlying google.genai.Client, same as the raw client this
+# replaced.
+_adk_model = Gemini(
+    model=_MODEL,
+    client_kwargs={
+        "vertexai": True,
+        "project": os.environ["GCP_PROJECT"],
+        "location": os.environ["GCP_LOCATION"],
+    },
+)
+_ADK_APP_NAME = "yt-curator"
+_ADK_USER_ID = "server"
+_adk_sessions = InMemorySessionService()
+_parallel = AsyncParallel(api_key=os.environ["PARALLEL_API_KEY"])
 _SEARCH_MODE = "fast"
 _MAX_CHARS_PER_SEARCH = 3000
 _NUM_INSIGHTS = 5
@@ -151,12 +164,6 @@ class _Summary(BaseModel):
     summary: str
 
 
-_generated_topic_list_adapter = TypeAdapter(list[_GeneratedTopic])
-_candidate_list_adapter = TypeAdapter(list[_Candidate])
-_selection_list_adapter = TypeAdapter(list[_Selection])
-_insight_list_adapter = TypeAdapter(list[_Insight])
-
-
 def _fmt_time(seconds: float) -> str:
     total = int(seconds)
     return f"{total // 60}:{total % 60:02d}"
@@ -237,23 +244,54 @@ def _resolve_candidate(candidate: _Candidate, batch: list[tuple[int, dict]]) -> 
     return _ScanHit(candidate=candidate, chunk_index=index, timestamp_seconds=timestamp)
 
 
+# Every model call in this file runs as a native ADK LlmAgent through a
+# Runner, rather than a bare google.genai client call - each call gets its
+# own throwaway session (this pipeline is stateless request-to-request, so
+# there's nothing worth persisting between them), deleted once the result is
+# captured so a long-lived Cloud Run instance doesn't accumulate sessions
+# across requests.
+async def _run_agent(name: str, prompt: str, output_schema):
+    agent = LlmAgent(
+        name=name,
+        model=_adk_model,
+        output_schema=output_schema,
+        output_key="result",
+        generate_content_config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+        ),
+    )
+    session = await _adk_sessions.create_session(app_name=_ADK_APP_NAME, user_id=_ADK_USER_ID)
+    runner = Runner(agent=agent, app_name=_ADK_APP_NAME, session_service=_adk_sessions)
+    try:
+        result = None
+        async for event in runner.run_async(
+            user_id=_ADK_USER_ID,
+            session_id=session.id,
+            new_message=types.Content(role="user", parts=[types.Part(text=prompt)]),
+        ):
+            if event.actions and event.actions.state_delta.get("result") is not None:
+                result = event.actions.state_delta["result"]
+    finally:
+        await _adk_sessions.delete_session(
+            app_name=_ADK_APP_NAME, user_id=_ADK_USER_ID, session_id=session.id
+        )
+    if result is None:
+        raise RuntimeError(f"agent {name!r} produced no structured output")
+    return TypeAdapter(output_schema).validate_python(result)
+
+
 async def _scan_batch(
     title: str, batch: list[tuple[int, dict]], context: tuple[int, dict] | None
 ) -> list[_ScanHit]:
-    resp = await _gemini.aio.models.generate_content(
-        model=_MODEL,
-        contents=_SCAN_PROMPT.format(
+    candidates = await _run_agent(
+        "scan_batch",
+        _SCAN_PROMPT.format(
             title=title,
             categories=", ".join(_CATEGORIES),
             transcript=_format_chunk_batch(batch, context[1] if context else None),
         ),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=list[_Candidate],
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
+        list[_Candidate],
     )
-    candidates = _candidate_list_adapter.validate_json(resp.text)
     # The context chunk joins the searchable text so a quote straddling the
     # batch boundary still resolves - quote matching makes citing it safe,
     # since placement is verified against the transcript either way.
@@ -315,16 +353,9 @@ async def _select_topics(hits: list[_ScanHit], num_chunks: int) -> list[_Topic]:
     if not segments:
         return []
 
-    resp = await _gemini.aio.models.generate_content(
-        model=_MODEL,
-        contents=_SELECT_PROMPT.format(segments="\n\n".join(segments)),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=list[_Selection],
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
+    selections = await _run_agent(
+        "select_topics", _SELECT_PROMPT.format(segments="\n\n".join(segments)), list[_Selection]
     )
-    selections = _selection_list_adapter.validate_json(resp.text)
 
     topics = []
     for sel in selections:
@@ -365,21 +396,17 @@ def _format_item(topic: _Topic, result) -> str:
 async def _generate_summary(title: str, description: str, transcript_chunks: list[dict] | None) -> str:
     transcript_note = " and transcript" if transcript_chunks else ""
     transcript_block = f"\nTranscript excerpt:\n{_format_transcript(transcript_chunks)}\n" if transcript_chunks else ""
-    resp = await _gemini.aio.models.generate_content(
-        model=_MODEL,
-        contents=_SUMMARY_PROMPT.format(
+    summary = await _run_agent(
+        "generate_summary",
+        _SUMMARY_PROMPT.format(
             title=title,
             description=description[:_MAX_DESCRIPTION_CHARS],
             transcript_note=transcript_note,
             transcript_block=transcript_block,
         ),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=_Summary,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
+        _Summary,
     )
-    return _Summary.model_validate_json(resp.text).summary
+    return summary.summary
 
 
 async def _generate_topics(title: str, description: str, transcript_chunks: list[dict] | None) -> list[_Topic]:
@@ -387,21 +414,16 @@ async def _generate_topics(title: str, description: str, transcript_chunks: list
         hits = await _scan_transcript_for_candidates(title, transcript_chunks)
         return await _select_topics(hits, len(transcript_chunks)) if hits else []
 
-    topic_resp = await _gemini.aio.models.generate_content(
-        model=_MODEL,
-        contents=_TOPIC_PROMPT.format(
+    generated = await _run_agent(
+        "generate_topics",
+        _TOPIC_PROMPT.format(
             n=_NUM_INSIGHTS,
             title=title,
             description=description[:_MAX_DESCRIPTION_CHARS],
             categories=", ".join(_CATEGORIES),
         ),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=list[_GeneratedTopic],
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
+        list[_GeneratedTopic],
     )
-    generated = _generated_topic_list_adapter.validate_json(topic_resp.text)
     return [_Topic(**g.model_dump()) for g in generated]
 
 
@@ -421,16 +443,7 @@ async def generate_insights(
     )
     items = "\n\n".join(_format_item(t, r) for t, r in searched)
 
-    insight_resp = await _gemini.aio.models.generate_content(
-        model=_MODEL,
-        contents=_INSIGHT_PROMPT.format(items=items),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=list[_Insight],
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
-    )
-    written = _insight_list_adapter.validate_json(insight_resp.text)
+    written = await _run_agent("write_insights", _INSIGHT_PROMPT.format(items=items), list[_Insight])
 
     insights = []
     for i, w in enumerate(written):
