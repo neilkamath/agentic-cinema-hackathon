@@ -55,21 +55,32 @@ def fetch_video_metadata(video_id: str) -> dict:
     }
 
 
-def fetch_comments(video_id: str, max_results: int = 100) -> list[dict]:
-    resp = requests.get(
-        COMMENT_THREADS_URL,
-        params={
+def fetch_comments(video_id: str, max_pages: int = 20) -> list[dict]:
+    collected = []
+    page_token = None
+
+    for _ in range(max_pages):
+        params = {
             "part": "snippet",
             "videoId": video_id,
-            "maxResults": max_results,
+            "maxResults": 100,
             "order": "relevance",
             "textFormat": "plainText",
             "key": YOUTUBE_API_KEY,
-        },
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return [_parse_item(item) for item in resp.json()["items"]]
+        }
+        if page_token:
+            params["pageToken"] = page_token
+
+        resp = requests.get(COMMENT_THREADS_URL, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        collected.extend(_parse_item(item) for item in data["items"])
+
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
+
+    return collected
 
 
 def fetch_comments_since(video_id: str, after: str | None, max_pages: int = 3) -> list[dict]:
