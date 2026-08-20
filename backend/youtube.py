@@ -72,6 +72,13 @@ def _parse_item(item: dict) -> dict:
     }
 
 
+# YouTube's video category taxonomy - "10" is Music. A video in this
+# category is scanned for insights differently (see main.py): lyrics aren't
+# informative transcript content, so we skip the transcript entirely rather
+# than mining "facts" out of song lyrics.
+MUSIC_CATEGORY_ID = "10"
+
+
 def fetch_video_metadata(video_id: str) -> dict:
     resp = requests.get(
         VIDEOS_URL,
@@ -87,6 +94,7 @@ def fetch_video_metadata(video_id: str) -> dict:
         "title": snippet["title"],
         "description": snippet.get("description", ""),
         "channel_title": snippet.get("channelTitle", ""),
+        "is_music": snippet.get("categoryId") == MUSIC_CATEGORY_ID,
     }
 
 

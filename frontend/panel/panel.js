@@ -186,10 +186,11 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
 
   const state = {
     comments: [],
-    // Insight cards only get embedded with a real transcript-anchored
-    // timestamp - no interpolated placement for these, unlike comments
-    // below. An insight without one is simply left out of the feed.
-    insights: (insights || []).filter((i) => i.timestamp_seconds != null),
+    // Insights with a real transcript-anchored timestamp are placed there.
+    // Insights without one (e.g. music videos, generated from the
+    // description rather than a transcript) are interpolated the same way
+    // untimestamped comments are, in mergeInitial below.
+    insights: insights || [],
     // Sorted array of { type: "comment"|"insight", id, effectiveTimestamp } -
     // the single merged order the feed renders in.
     sequence: [],
@@ -305,15 +306,26 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
         interpolated: true,
       });
     });
-    for (const insight of state.insights) {
+    const timestampedInsights = state.insights.filter((i) => i.timestamp_seconds != null);
+    const untimestampedInsights = state.insights.filter((i) => i.timestamp_seconds == null);
+    for (const insight of timestampedInsights) {
       items.push({
         type: "insight",
         id: insight.id,
         data: insight,
-        effectiveTimestamp: insight.timestamp_seconds,
+        effectiveTimestamp: Math.min(insight.timestamp_seconds, duration),
         interpolated: false,
       });
     }
+    untimestampedInsights.forEach((insight, i) => {
+      items.push({
+        type: "insight",
+        id: insight.id,
+        data: insight,
+        effectiveTimestamp: ((i + 1) / untimestampedInsights.length) * duration,
+        interpolated: true,
+      });
+    });
     items.sort((a, b) => a.effectiveTimestamp - b.effectiveTimestamp);
     state.sequence = items;
     state.mergedDuration = duration;
@@ -342,10 +354,12 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   function rescaleComments(newDuration) {
     const ratio = newDuration / state.mergedDuration;
     for (const item of state.sequence) {
-      // Only interpolated comments were guessed against the old duration -
-      // real extracted timestamps and insight timestamps are actual video
-      // positions and stay put regardless of what duration turned out to be.
-      if (item.type === "comment" && item.interpolated) {
+      // Only interpolated items (comments, and description-only insights on
+      // music videos) were guessed against the old duration - real extracted
+      // timestamps and transcript-anchored insight timestamps are actual
+      // video positions and stay put regardless of what duration turned out
+      // to be.
+      if (item.interpolated) {
         item.effectiveTimestamp *= ratio;
       }
     }

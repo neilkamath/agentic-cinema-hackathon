@@ -52,8 +52,14 @@ async def poll_comments(video_id: str, body: PollRequest):
 @app.get("/video/{video_id}/insights")
 async def get_insights(video_id: str):
     metadata = await anyio.to_thread.run_sync(fetch_video_metadata, video_id)
-    segments = await anyio.to_thread.run_sync(fetch_transcript, video_id)
-    transcript_chunks = chunk_transcript(segments) if segments else None
+    if metadata["is_music"]:
+        # Song lyrics aren't informative transcript content - generate
+        # insights from the description instead, same as the no-transcript
+        # fallback path.
+        transcript_chunks = None
+    else:
+        segments = await anyio.to_thread.run_sync(fetch_transcript, video_id)
+        transcript_chunks = chunk_transcript(segments) if segments else None
     result = await generate_insights(metadata["title"], metadata["description"], transcript_chunks)
     return {
         "video_id": video_id,
