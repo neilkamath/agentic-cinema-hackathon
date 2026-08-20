@@ -222,7 +222,7 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   const jumpButton = document.createElement("button");
   jumpButton.type = "button";
   jumpButton.className = "jump-to-current";
-  jumpButton.innerHTML = `${ICONS.arrowDown}<span>Jump back</span>`;
+  jumpButton.innerHTML = `<span>Jump back</span>`;
   jumpButton.addEventListener("click", () => {
     state.autoGlide = true;
     jumpButton.classList.remove("visible");
