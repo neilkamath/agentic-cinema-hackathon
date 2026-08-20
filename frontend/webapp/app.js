@@ -27,7 +27,11 @@ function getPlaybackState() {
   if (!player || typeof player.getDuration !== "function") return null;
   const duration = player.getDuration();
   if (!duration) return null;
-  return { currentTime: player.getCurrentTime(), duration };
+  return {
+    currentTime: player.getCurrentTime(),
+    duration,
+    paused: player.getPlayerState() !== YT.PlayerState.PLAYING,
+  };
 }
 
 function setupResizableDivider(panelHandle) {

@@ -415,21 +415,24 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
         state.lastCurrentTime != null &&
         Math.abs(playback.currentTime - state.lastCurrentTime) > SEEK_JUMP_THRESHOLD_SEC;
 
-      let nextPos;
       if (seeked || state.lastFrameTime == null) {
         // First frame, or the video position jumped on its own (a real seek,
         // a duration-correction rescale, etc.) - resync instantly rather than
         // crawling toward it at the capped speed.
-        nextPos = idealTarget;
-      } else {
+        state.lastTarget = idealTarget;
+        container.scrollTop = idealTarget;
+      } else if (!playback.paused) {
+        // Only the capped catch-up moves the scroll forward - if it was
+        // lagging behind the ideal position when the viewer hit pause, it
+        // should freeze right where it is, not keep creeping ahead to finish
+        // catching up while nothing is playing.
         const dt = (now - state.lastFrameTime) / 1000;
         const maxDelta = MAX_SCROLL_SPEED_PX_PER_SEC * dt;
         const diff = idealTarget - state.lastTarget;
-        nextPos = state.lastTarget + Math.max(-maxDelta, Math.min(maxDelta, diff));
+        const nextPos = state.lastTarget + Math.max(-maxDelta, Math.min(maxDelta, diff));
+        state.lastTarget = nextPos;
+        container.scrollTop = nextPos;
       }
-
-      state.lastTarget = nextPos;
-      container.scrollTop = nextPos;
     }
 
     state.lastFrameTime = now;
