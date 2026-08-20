@@ -23,6 +23,41 @@ def _extract_timestamp_seconds(text: str) -> int | None:
     return total
 
 
+def _substantive_text(text: str) -> str:
+    # Keeps only letters/digits/whitespace from any script - a comment that
+    # reduces to nothing under this has no actual content of its own, just
+    # punctuation/emoji/etc.
+    return "".join(ch for ch in text if ch.isalnum() or ch.isspace()).strip()
+
+
+def _is_bare_timestamp(text: str, timestamp_seconds: int | None) -> bool:
+    if timestamp_seconds is None:
+        return False
+    match = _TIMESTAMP_RE.search(text)
+    if not match:
+        return False
+    remainder = text[: match.start()] + text[match.end() :]
+    return _substantive_text(remainder) == ""
+
+
+def _filter_comments(comments: list[dict]) -> list[dict]:
+    seen_text = set()
+    filtered = []
+    for c in comments:
+        if _is_bare_timestamp(c["text"], c["timestamp_seconds"]):
+            continue
+        # Only dedupe on comments that have real content - an empty
+        # normalized key (e.g. an emoji-only comment) isn't a reliable
+        # fingerprint, since unrelated comments could collide on it.
+        key = _substantive_text(c["text"]).lower()
+        if key:
+            if key in seen_text:
+                continue
+            seen_text.add(key)
+        filtered.append(c)
+    return filtered
+
+
 def _parse_item(item: dict) -> dict:
     snippet = item["snippet"]["topLevelComment"]["snippet"]
     text = snippet["textDisplay"]
@@ -80,7 +115,7 @@ def fetch_comments(video_id: str, max_pages: int = 20) -> list[dict]:
         if not page_token:
             break
 
-    return collected
+    return _filter_comments(collected)
 
 
 def fetch_comments_since(video_id: str, after: str | None, max_pages: int = 3) -> list[dict]:
@@ -117,4 +152,4 @@ def fetch_comments_since(video_id: str, after: str | None, max_pages: int = 3) -
         if not page_token or reached_boundary:
             break
 
-    return collected
+    return _filter_comments(collected)
