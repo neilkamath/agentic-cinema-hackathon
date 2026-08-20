@@ -267,18 +267,35 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   // frontloading every node is what lets the glide reveal them smoothly
   // together instead of comments and insights living in separate places.
   function mergeInitial(duration) {
-    const items = state.comments.map((comment, i) => ({
+    // Comments that mention a timestamp in their own text (e.g. "12:34 lol")
+    // get placed at that real moment instead of being interpolated - it's a
+    // literal fact the commenter stated, not an inferred position. Only the
+    // remaining, undated comments still fall back to an even spread.
+    const timestamped = state.comments.filter((c) => c.timestamp_seconds != null);
+    const untimestamped = state.comments.filter((c) => c.timestamp_seconds == null);
+    const items = timestamped.map((comment) => ({
       type: "comment",
       id: comment.id,
       data: comment,
-      effectiveTimestamp: ((i + 1) / state.comments.length) * duration,
+      effectiveTimestamp: Math.min(comment.timestamp_seconds, duration),
+      interpolated: false,
     }));
+    untimestamped.forEach((comment, i) => {
+      items.push({
+        type: "comment",
+        id: comment.id,
+        data: comment,
+        effectiveTimestamp: ((i + 1) / untimestamped.length) * duration,
+        interpolated: true,
+      });
+    });
     for (const insight of state.insights) {
       items.push({
         type: "insight",
         id: insight.id,
         data: insight,
         effectiveTimestamp: insight.timestamp_seconds,
+        interpolated: false,
       });
     }
     items.sort((a, b) => a.effectiveTimestamp - b.effectiveTimestamp);
@@ -309,7 +326,10 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   function rescaleComments(newDuration) {
     const ratio = newDuration / state.mergedDuration;
     for (const item of state.sequence) {
-      if (item.type === "comment") {
+      // Only interpolated comments were guessed against the old duration -
+      // real extracted timestamps and insight timestamps are actual video
+      // positions and stay put regardless of what duration turned out to be.
+      if (item.type === "comment" && item.interpolated) {
         item.effectiveTimestamp *= ratio;
       }
     }
@@ -328,9 +348,13 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   // were interpolated further ahead.
   function insertComment(comment, currentTime) {
     if (renderedNodes.has(comment.id)) return;
-    const item = { type: "comment", id: comment.id, data: comment, effectiveTimestamp: currentTime };
+    const hasTimestamp = comment.timestamp_seconds != null;
+    const effectiveTimestamp = hasTimestamp
+      ? Math.min(comment.timestamp_seconds, state.mergedDuration)
+      : currentTime;
+    const item = { type: "comment", id: comment.id, data: comment, effectiveTimestamp, interpolated: !hasTimestamp };
 
-    let idx = state.sequence.findIndex((s) => s.effectiveTimestamp > currentTime);
+    let idx = state.sequence.findIndex((s) => s.effectiveTimestamp > effectiveTimestamp);
     if (idx === -1) idx = state.sequence.length;
     state.sequence.splice(idx, 0, item);
 

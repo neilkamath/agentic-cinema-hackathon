@@ -1,4 +1,5 @@
 import os
+import re
 
 import requests
 
@@ -6,16 +7,33 @@ YOUTUBE_API_KEY = os.environ["YOUTUBE_API_KEY"]
 COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
 VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 
+# Matches "mm:ss" or "h:mm:ss" (e.g. "12:34" or "1:02:34"), the format
+# viewers actually type when referencing a moment in the video.
+_TIMESTAMP_RE = re.compile(r"\b(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)\b")
+
+
+def _extract_timestamp_seconds(text: str) -> int | None:
+    match = _TIMESTAMP_RE.search(text)
+    if not match:
+        return None
+    hours, minutes, seconds = match.groups()
+    total = int(minutes) * 60 + int(seconds)
+    if hours:
+        total += int(hours) * 3600
+    return total
+
 
 def _parse_item(item: dict) -> dict:
     snippet = item["snippet"]["topLevelComment"]["snippet"]
+    text = snippet["textDisplay"]
     return {
         "id": item["id"],
         "author": snippet["authorDisplayName"],
         "author_avatar_url": snippet["authorProfileImageUrl"],
-        "text": snippet["textDisplay"],
+        "text": text,
         "like_count": snippet["likeCount"],
         "published_at": snippet["publishedAt"],
+        "timestamp_seconds": _extract_timestamp_seconds(text),
     }
 
 
