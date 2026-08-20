@@ -24,20 +24,28 @@ def fetch_transcript(video_id: str) -> list[dict] | None:
 
 
 def chunk_transcript(segments: list[dict], chunk_seconds: float = 60) -> list[dict]:
+    # Each chunk keeps its raw segments (with per-segment start times) so a
+    # quote found inside the chunk can be timestamped to the exact utterance,
+    # not just the chunk boundary.
     chunks = []
-    current_start = None
-    current_text: list[str] = []
+    current: list[dict] = []
+
+    def flush():
+        chunks.append(
+            {
+                "start_seconds": current[0]["start"],
+                "text": " ".join(s["text"] for s in current),
+                "segments": [{"start_seconds": s["start"], "text": s["text"]} for s in current],
+            }
+        )
 
     for seg in segments:
-        if current_start is None:
-            current_start = seg["start"]
-        if seg["start"] - current_start >= chunk_seconds and current_text:
-            chunks.append({"start_seconds": current_start, "text": " ".join(current_text)})
-            current_start = seg["start"]
-            current_text = []
-        current_text.append(seg["text"])
+        if current and seg["start"] - current[0]["start"] >= chunk_seconds:
+            flush()
+            current = []
+        current.append(seg)
 
-    if current_text:
-        chunks.append({"start_seconds": current_start, "text": " ".join(current_text)})
+    if current:
+        flush()
 
     return chunks

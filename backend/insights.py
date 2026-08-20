@@ -1,12 +1,18 @@
 import asyncio
+import logging
 import math
 import os
+import re
+from dataclasses import dataclass
+from difflib import SequenceMatcher
 from typing import Literal
 
 from google import genai
 from google.genai import types
 from parallel import AsyncParallel
 from pydantic import BaseModel, TypeAdapter
+
+_log = logging.getLogger(__name__)
 
 _gemini = genai.Client(
     vertexai=True,
@@ -19,7 +25,10 @@ _SEARCH_MODE = "fast"
 _MAX_CHARS_PER_SEARCH = 3000
 _NUM_INSIGHTS = 5
 _MAX_DESCRIPTION_CHARS = 2000
-_CHUNK_BATCH_SIZE = 4
+_CHUNK_BATCH_SIZE = 6
+# Fraction of a quote that must be found contiguously in the transcript for
+# the candidate to count as genuinely sourced from it.
+_MIN_QUOTE_MATCH = 0.6
 
 _CATEGORIES = ["background", "did_you_know", "deeper_dive", "related_event"]
 
@@ -36,16 +45,23 @@ Return a JSON array of exactly {n} objects, each with fields: topic, search_obje
 # entire transcript and recall where a topic came from afterward, which is
 # an unreliable long-context retrieval task (verified: ~20-40% placement
 # accuracy on conversational content, even with a larger thinking budget).
+# The verbatim quote is the real placement anchor: the timestamp is derived
+# server-side by string-matching the quote against the transcript, so the
+# model's chunk_index is only a hint and an unfindable quote disqualifies
+# the candidate.
 _SCAN_PROMPT = """Below is a short excerpt from a video's transcript (title: "{title}"), given as numbered, timestamped chunks. Identify any genuinely interesting real-world facts or topics actually mentioned in THIS excerpt that a curious viewer would want to learn more about - the kind of "did you know" moment worth surfacing. Only use what's actually said here - if nothing in this excerpt is genuinely interesting, return an empty array. For each one you find, give:
 - topic: a short description of the fact/topic
 - category (one of: {categories})
 - video_reference: one short sentence paraphrasing what's actually said here that inspired this topic - name who said it if it's clear from context (e.g. "Jon mentioned he played catcher for a baseball team in Russia")
+- quote: a short span (roughly 5-15 words) copied VERBATIM from the chunk where this is discussed - the exact words as they appear, not paraphrased, cleaned up, or stitched together from different places
 - chunk_index: the number of the exact chunk below where this is discussed (must be one of the chunk numbers shown below)
+
+The excerpt may begin with an unnumbered chunk marked "context only" - use it to follow the conversation, but never take quotes or chunk numbers from it.
 
 Transcript excerpt:
 {transcript}
 
-Return a JSON array (can be empty) of objects with fields: topic, category, video_reference, chunk_index."""
+Return a JSON array (can be empty) of objects with fields: topic, category, video_reference, quote, chunk_index."""
 
 # Picks one candidate from each video segment (Stage B) and writes search
 # queries for them. Candidates are grouped into segments (rather than left as
@@ -76,20 +92,46 @@ Description: {description}
 Return a JSON object with a single field: summary."""
 
 
+_Category = Literal["background", "did_you_know", "deeper_dive", "related_event"]
+
+
+# Response schema for the no-transcript path only - it must not contain
+# timestamp or placement fields, so the model never gets a slot to write one.
+class _GeneratedTopic(BaseModel):
+    topic: str
+    search_objective: str
+    search_queries: list[str]
+    category: _Category
+
+
+# Internal only, never a Gemini response schema: timestamp_seconds is always
+# computed server-side from the transcript, never model-written.
 class _Topic(BaseModel):
     topic: str
     search_objective: str
     search_queries: list[str]
-    category: Literal["background", "did_you_know", "deeper_dive", "related_event"]
+    category: _Category
     video_reference: str | None = None
-    chunk_index: int | None = None
+    quote: str | None = None
+    timestamp_seconds: float | None = None
 
 
 class _Candidate(BaseModel):
     topic: str
-    category: Literal["background", "did_you_know", "deeper_dive", "related_event"]
+    category: _Category
     video_reference: str
+    quote: str
     chunk_index: int
+
+
+# A candidate whose quote was actually found in the transcript, with the
+# chunk index corrected to where the quote really is and the timestamp of
+# the exact segment containing it.
+@dataclass
+class _ScanHit:
+    candidate: _Candidate
+    chunk_index: int
+    timestamp_seconds: float
 
 
 class _Selection(BaseModel):
@@ -109,7 +151,7 @@ class _Summary(BaseModel):
     summary: str
 
 
-_topic_list_adapter = TypeAdapter(list[_Topic])
+_generated_topic_list_adapter = TypeAdapter(list[_GeneratedTopic])
 _candidate_list_adapter = TypeAdapter(list[_Candidate])
 _selection_list_adapter = TypeAdapter(list[_Selection])
 _insight_list_adapter = TypeAdapter(list[_Insight])
@@ -124,18 +166,86 @@ def _format_transcript(transcript_chunks: list[dict]) -> str:
     return "\n".join(f"[{_fmt_time(c['start_seconds'])}] {c['text']}" for c in transcript_chunks)
 
 
-def _format_chunk_batch(batch: list[tuple[int, dict]]) -> str:
-    return "\n".join(f"[{i}] [{_fmt_time(c['start_seconds'])}] {c['text']}" for i, c in batch)
+def _format_chunk_batch(batch: list[tuple[int, dict]], context_chunk: dict | None) -> str:
+    lines = []
+    if context_chunk is not None:
+        lines.append(
+            f"(context only) [{_fmt_time(context_chunk['start_seconds'])}] {context_chunk['text']}"
+        )
+    lines.extend(f"[{i}] [{_fmt_time(c['start_seconds'])}] {c['text']}" for i, c in batch)
+    return "\n".join(lines)
 
 
-async def _scan_batch(title: str, batch: list[tuple[int, dict]]) -> list[_Candidate]:
-    valid_indices = {i for i, _ in batch}
+def _normalize(text: str) -> str:
+    # Bracketed spans are ASR annotations - "(upbeat music)", "[ __ ]",
+    # "[Narrator]" - that get interleaved mid-sentence and would break an
+    # otherwise contiguous match against a verbatim quote.
+    text = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", text)
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def _resolve_candidate(candidate: _Candidate, batch: list[tuple[int, dict]]) -> _ScanHit | None:
+    # Placement is decided by string-matching the model's verbatim quote
+    # against our own transcript text - the model's chunk_index only breaks
+    # ties when the same words occur more than once. The whole batch is
+    # searched as one haystack so quotes spanning a chunk boundary still
+    # match. A quote that can't be found anywhere in the batch means the
+    # topic wasn't genuinely read off the transcript, so it's dropped.
+    nquote = _normalize(candidate.quote)
+    if not nquote:
+        return None
+
+    parts = []
+    spans = []  # (end offset of this segment in the haystack, chunk index, start time)
+    pos = 0
+    for index, chunk in batch:
+        for seg in chunk.get("segments") or [chunk]:
+            ntext = _normalize(seg["text"])
+            if not ntext:
+                continue
+            parts.append(ntext)
+            spans.append((pos + len(ntext), index, seg["start_seconds"]))
+            pos += len(ntext) + 1
+    if not spans:
+        return None
+    haystack = " ".join(parts)
+
+    def span_at(offset: int) -> tuple[int, float]:
+        for end, index, start_seconds in spans:
+            if offset < end:
+                return index, start_seconds
+        return spans[-1][1], spans[-1][2]
+
+    occurrences = []
+    found = haystack.find(nquote)
+    while found >= 0:
+        occurrences.append(found)
+        found = haystack.find(nquote, found + 1)
+    if occurrences:
+        offset = next(
+            (o for o in occurrences if span_at(o)[0] == candidate.chunk_index), occurrences[0]
+        )
+    else:
+        m = SequenceMatcher(None, nquote, haystack, autojunk=False).find_longest_match(
+            0, len(nquote), 0, len(haystack)
+        )
+        if m.size < _MIN_QUOTE_MATCH * len(nquote):
+            return None
+        offset = max(0, m.b - m.a)
+
+    index, timestamp = span_at(offset)
+    return _ScanHit(candidate=candidate, chunk_index=index, timestamp_seconds=timestamp)
+
+
+async def _scan_batch(
+    title: str, batch: list[tuple[int, dict]], context: tuple[int, dict] | None
+) -> list[_ScanHit]:
     resp = await _gemini.aio.models.generate_content(
         model=_MODEL,
         contents=_SCAN_PROMPT.format(
             title=title,
             categories=", ".join(_CATEGORIES),
-            transcript=_format_chunk_batch(batch),
+            transcript=_format_chunk_batch(batch, context[1] if context else None),
         ),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -144,38 +254,61 @@ async def _scan_batch(title: str, batch: list[tuple[int, dict]]) -> list[_Candid
         ),
     )
     candidates = _candidate_list_adapter.validate_json(resp.text)
-    # Defensive: the model only ever saw these chunks, so drop anything that
-    # claims an index it wasn't actually shown.
-    return [c for c in candidates if c.chunk_index in valid_indices]
+    # The context chunk joins the searchable text so a quote straddling the
+    # batch boundary still resolves - quote matching makes citing it safe,
+    # since placement is verified against the transcript either way.
+    searchable = ([context] if context else []) + batch
+    hits = []
+    for candidate in candidates:
+        hit = _resolve_candidate(candidate, searchable)
+        if hit is None:
+            _log.info("dropping candidate with unlocatable quote: %r", candidate.quote)
+            continue
+        hits.append(hit)
+    return hits
 
 
-async def _scan_transcript_for_candidates(title: str, transcript_chunks: list[dict]) -> list[_Candidate]:
+async def _scan_transcript_for_candidates(title: str, transcript_chunks: list[dict]) -> list[_ScanHit]:
     indexed = list(enumerate(transcript_chunks))
-    batches = [indexed[i : i + _CHUNK_BATCH_SIZE] for i in range(0, len(indexed), _CHUNK_BATCH_SIZE)]
-    results = await asyncio.gather(*(_scan_batch(title, batch) for batch in batches))
-    return [candidate for batch_result in results for candidate in batch_result]
+    tasks = []
+    for i in range(0, len(indexed), _CHUNK_BATCH_SIZE):
+        batch = indexed[i : i + _CHUNK_BATCH_SIZE]
+        # The previous chunk rides along unnumbered so conversational threads
+        # that straddle a batch boundary can still be followed; the model
+        # can't cite it, but the resolver can still anchor a quote in it.
+        context = indexed[i - 1] if i > 0 else None
+        tasks.append(_scan_batch(title, batch, context))
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    hits = []
+    for result in results:
+        if isinstance(result, BaseException):
+            _log.warning("transcript scan batch failed, skipping it: %s", result)
+            continue
+        hits.extend(result)
+    return hits
 
 
-async def _select_topics(candidates: list[_Candidate], num_chunks: int) -> list[_Topic]:
-    candidates_by_id = {f"c{i}": c for i, c in enumerate(candidates)}
+async def _select_topics(hits: list[_ScanHit], num_chunks: int) -> list[_Topic]:
+    hits_by_id = {f"c{i}": h for i, h in enumerate(hits)}
 
     # Bucket by chunk_index into _NUM_INSIGHTS equal segments spanning the
     # video's full chunk range, so segment membership is deterministic - the
     # model only has to judge quality within each segment, not police its own
     # spread across the video.
     bucket_size = max(1, math.ceil(num_chunks / _NUM_INSIGHTS))
-    buckets: list[list[tuple[str, _Candidate]]] = [[] for _ in range(_NUM_INSIGHTS)]
-    for cid, c in candidates_by_id.items():
-        bucket_idx = min(_NUM_INSIGHTS - 1, c.chunk_index // bucket_size)
-        buckets[bucket_idx].append((cid, c))
+    buckets: list[list[tuple[str, _ScanHit]]] = [[] for _ in range(_NUM_INSIGHTS)]
+    for cid, h in hits_by_id.items():
+        bucket_idx = min(_NUM_INSIGHTS - 1, h.chunk_index // bucket_size)
+        buckets[bucket_idx].append((cid, h))
 
     segments = []
     for i, bucket in enumerate(buckets):
         if not bucket:
             continue
         lines = "\n".join(
-            f"  [{cid}] topic: {c.topic} | category: {c.category} | reference: {c.video_reference}"
-            for cid, c in bucket
+            f"  [{cid}] topic: {h.candidate.topic} | category: {h.candidate.category}"
+            f" | reference: {h.candidate.video_reference}"
+            for cid, h in bucket
         )
         segments.append(f"Segment {i + 1}:\n{lines}")
 
@@ -195,17 +328,18 @@ async def _select_topics(candidates: list[_Candidate], num_chunks: int) -> list[
 
     topics = []
     for sel in selections:
-        candidate = candidates_by_id.get(sel.candidate_id)
-        if candidate is None:
+        hit = hits_by_id.get(sel.candidate_id)
+        if hit is None:
             continue
         topics.append(
             _Topic(
-                topic=candidate.topic,
+                topic=hit.candidate.topic,
                 search_objective=sel.search_objective,
                 search_queries=sel.search_queries,
-                category=candidate.category,
-                video_reference=candidate.video_reference,
-                chunk_index=candidate.chunk_index,
+                category=hit.candidate.category,
+                video_reference=hit.candidate.video_reference,
+                quote=hit.candidate.quote,
+                timestamp_seconds=hit.timestamp_seconds,
             )
         )
     return topics
@@ -250,8 +384,8 @@ async def _generate_summary(title: str, description: str, transcript_chunks: lis
 
 async def _generate_topics(title: str, description: str, transcript_chunks: list[dict] | None) -> list[_Topic]:
     if transcript_chunks:
-        candidates = await _scan_transcript_for_candidates(title, transcript_chunks)
-        return await _select_topics(candidates, len(transcript_chunks)) if candidates else []
+        hits = await _scan_transcript_for_candidates(title, transcript_chunks)
+        return await _select_topics(hits, len(transcript_chunks)) if hits else []
 
     topic_resp = await _gemini.aio.models.generate_content(
         model=_MODEL,
@@ -263,11 +397,12 @@ async def _generate_topics(title: str, description: str, transcript_chunks: list
         ),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=list[_Topic],
+            response_schema=list[_GeneratedTopic],
             thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
-    return _topic_list_adapter.validate_json(topic_resp.text)
+    generated = _generated_topic_list_adapter.validate_json(topic_resp.text)
+    return [_Topic(**g.model_dump()) for g in generated]
 
 
 async def generate_insights(
@@ -296,22 +431,15 @@ async def generate_insights(
         ),
     )
     written = _insight_list_adapter.validate_json(insight_resp.text)
-    topics_by_name = {t.topic: t for t in topics}
-
-    def resolve_timestamp(topic: "_Topic | None") -> float | None:
-        # The chunk_index always comes from a chunk the model actually scanned
-        # in isolation (Stage A), and the real timestamp always comes from our
-        # own chunk data - never from a value the model wrote itself - so an
-        # out-of-range or invented timestamp is impossible.
-        if topic is None or topic.chunk_index is None or transcript_chunks is None:
-            return None
-        if not (0 <= topic.chunk_index < len(transcript_chunks)):
-            return None
-        return transcript_chunks[topic.chunk_index]["start_seconds"]
 
     insights = []
     for i, w in enumerate(written):
-        topic = topics_by_name.get(w.topic)
+        # The writing stage echoes topics back in input order, so position -
+        # not the echoed topic string, which the model sometimes rewrites - is
+        # what links an insight back to its topic and timestamp. The timestamp
+        # itself was derived from the transcript in Stage A and is never a
+        # value the model wrote.
+        topic = topics[i] if i < len(topics) else None
         insights.append(
             {
                 "id": f"insight-{i}",
@@ -321,7 +449,7 @@ async def generate_insights(
                 "text": w.text,
                 "source_url": w.url,
                 "topic": w.topic,
-                "timestamp_seconds": resolve_timestamp(topic),
+                "timestamp_seconds": topic.timestamp_seconds if topic else None,
             }
         )
 
