@@ -3,6 +3,17 @@ export const API_BASE = new URLSearchParams(location.search).get("api") || DEFAU
 
 const POLL_INTERVAL_MS = 15000;
 const SCROLL_TOLERANCE_PX = 4;
+// A fixed reading pace, independent of how tall the feed is. Without this,
+// scroll speed is (total content height / video duration) - a video with a
+// huge comment section scrolls much faster than one with a small one, even
+// though the video length is the same. Capping it means dense comment
+// sections may not all get revealed by the end of the video, same as a real
+// live chat outrunning how fast anyone can read it.
+const MAX_SCROLL_SPEED_PX_PER_SEC = 35;
+// currentTime jumping by more than this between frames means the viewer (or
+// the player) seeked, not that time is progressing normally - seeks should
+// still resync instantly, only normal playback is speed-capped.
+const SEEK_JUMP_THRESHOLD_SEC = 1.5;
 
 const ICONS = {
   thumbsUp:
@@ -195,6 +206,11 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
     rafId: null,
     autoGlide: true,
     lastTarget: 0,
+    // For the speed-capped glide: the previous frame's timestamp and video
+    // currentTime, used to compute a max pixel delta and to tell a real seek
+    // apart from normal playback advancing.
+    lastFrameTime: null,
+    lastCurrentTime: null,
   };
 
   const renderedNodes = new Map();
@@ -385,24 +401,39 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
     }
   }
 
-  function glideLoop() {
+  function glideLoop(now) {
     const playback = getPlaybackState ? getPlaybackState() : null;
-    let justCorrectedDuration = false;
     if (!state.merged && playback && playback.duration) {
       mergeInitial(playback.duration);
     } else if (state.merged && playback && playback.duration && Math.abs(playback.duration - state.mergedDuration) > 1) {
       rescaleComments(playback.duration);
-      justCorrectedDuration = true;
     }
 
-    if (state.autoGlide) {
-      // getDuration() can report a wrong, unstable value for a moment right
-      // at video start before settling - when rescaleComments just corrected
-      // for that, animate the resulting position change instead of snapping
-      // straight to it, so a big one-time correction reads as a smooth
-      // scroll rather than a jarring jump.
-      scrollToTarget({ smooth: justCorrectedDuration });
+    if (state.autoGlide && playback && playback.duration) {
+      const idealTarget = baseTargetFor(playback);
+      const seeked =
+        state.lastCurrentTime != null &&
+        Math.abs(playback.currentTime - state.lastCurrentTime) > SEEK_JUMP_THRESHOLD_SEC;
+
+      let nextPos;
+      if (seeked || state.lastFrameTime == null) {
+        // First frame, or the video position jumped on its own (a real seek,
+        // a duration-correction rescale, etc.) - resync instantly rather than
+        // crawling toward it at the capped speed.
+        nextPos = idealTarget;
+      } else {
+        const dt = (now - state.lastFrameTime) / 1000;
+        const maxDelta = MAX_SCROLL_SPEED_PX_PER_SEC * dt;
+        const diff = idealTarget - state.lastTarget;
+        nextPos = state.lastTarget + Math.max(-maxDelta, Math.min(maxDelta, diff));
+      }
+
+      state.lastTarget = nextPos;
+      container.scrollTop = nextPos;
     }
+
+    state.lastFrameTime = now;
+    if (playback) state.lastCurrentTime = playback.currentTime;
     state.rafId = requestAnimationFrame(glideLoop);
   }
 
