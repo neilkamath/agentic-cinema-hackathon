@@ -41,11 +41,13 @@
         id: "mc9WVVAUQGE",
         title: "Tom Holland and Jon Bernthal Team Up While Eating Spicy Wings",
         channel: "Hot Ones",
+        timeSynced: true,
       },
       {
         id: "uxPdPpi5W4o",
         title: "Why Are 96,000,000 Black Balls on This Reservoir?",
         channel: "Veritasium",
+        timeSynced: true,
       },
       {
         id: "sOS9aOIXPEk",
@@ -53,6 +55,9 @@
         channel: "Daft Punk",
       },
     ];
+
+    const SYNC_ICON =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 
     // Local dev points the watch page at a local backend via ?api=...;
     // carry that through so this homepage works the same way whether it's
@@ -71,9 +76,13 @@
       card.className = "video-card";
       card.href = watchUrl(video.id);
 
+      const syncBadge = video.timeSynced
+        ? `<div class="sync-badge" title="Fact cards are synced to real moments in this video">${SYNC_ICON}</div>`
+        : "";
       card.innerHTML = `
         <div class="video-thumb">
           <img src="https://img.youtube.com/vi/${video.id}/hqdefault.jpg" alt="${video.title}" loading="lazy" />
+          ${syncBadge}
         </div>
         <div class="video-info">
           <div class="video-channel">${video.channel}</div>
