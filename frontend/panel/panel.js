@@ -21,6 +21,12 @@ const TIMELINE_JUMP_BOTTOM_MARGIN_PX = 16;
 // How long the feed stays pinned to a jumped-to card while waiting for the
 // player to reach the seek target, before giving up and resuming normal sync.
 const SEEK_PIN_TIMEOUT_MS = 3000;
+// An avatar load failure is usually YouTube's CDN rate-limiting a burst of
+// requests, not a permanently broken image - retrying after it's had a
+// moment to cool down recovers most of them instead of leaving a blank
+// circle for the rest of the session.
+const AVATAR_MAX_RETRIES = 3;
+const AVATAR_RETRY_BASE_DELAY_MS = 1500;
 
 const ICONS = {
   thumbsUp:
@@ -93,23 +99,40 @@ function renderSummaryCard(summary) {
   return row;
 }
 
+function loadAvatarWithRetry(avatar, url) {
+  let attempt = 0;
+  avatar.addEventListener("error", () => {
+    if (attempt >= AVATAR_MAX_RETRIES) {
+      avatar.style.visibility = "hidden";
+      return;
+    }
+    attempt += 1;
+    setTimeout(() => {
+      // Re-assigning the same URL is what actually retries the request - a
+      // failed <img> load isn't cached as a success, so the browser refetches.
+      avatar.src = url;
+    }, AVATAR_RETRY_BASE_DELAY_MS * attempt);
+  });
+  avatar.src = url;
+}
+
 function renderComment(comment) {
   const row = document.createElement("div");
   row.className = "comment";
 
   const avatar = document.createElement("img");
   avatar.className = "avatar";
-  avatar.src = comment.author_avatar_url;
   avatar.alt = "";
   // Comments are all frontloaded into the DOM at once (see mountPanel) so the
   // scroll glide has something to reveal smoothly - lazy-loading means the
   // browser only actually fetches an avatar once it nears the viewport,
   // pacing real network requests instead of bursting all of them at once
-  // against YouTube's rate-limited avatar CDN (yt3.ggpht.com).
+  // against YouTube's rate-limited avatar CDN (yt3.ggpht.com). A burst still
+  // gets through when the glide catches up quickly or jumps via a seek, so
+  // loadAvatarWithRetry gives a failed load a few chances to recover instead
+  // of leaving a permanent blank circle.
   avatar.loading = "lazy";
-  // An avatar that fails to load (e.g. still rate-limited) should fall back
-  // to the plain background circle instead of showing a broken-image glyph.
-  avatar.addEventListener("error", () => { avatar.style.visibility = "hidden"; }, { once: true });
+  loadAvatarWithRetry(avatar, comment.author_avatar_url);
   row.appendChild(avatar);
 
   const body = document.createElement("div");
