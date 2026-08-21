@@ -4,6 +4,14 @@ const DEFAULT_VIDEO_ID = "dQw4w9WgXcQ";
 const params = new URLSearchParams(location.search);
 const videoId = params.get("v") || DEFAULT_VIDEO_ID;
 
+// Carry a local-backend override back to the homepage, same as the homepage
+// carries it forward here - so the round trip keeps pointing at the same
+// backend during local testing instead of silently falling back to Cloud Run.
+const apiOverride = params.get("api");
+if (apiOverride) {
+  document.getElementById("back-link").href = `../index.html?api=${encodeURIComponent(apiOverride)}`;
+}
+
 let player = null;
 
 function createPlayer() {

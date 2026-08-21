@@ -98,8 +98,37 @@ body {
 }
 
 #video-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
   padding: var(--size-3) var(--size-4);
   border-bottom: 1px solid #272727;
+}
+
+#back-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-2);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+  font-size: 16px;
+  line-height: 1;
+  text-decoration: none;
+  transition: background 0.15s var(--ease-2);
+}
+
+#back-link:hover {
+  background: var(--accent-border);
+}
+
+#video-meta {
+  flex: 1;
+  min-width: 0;
 }
 
 #video-title {
