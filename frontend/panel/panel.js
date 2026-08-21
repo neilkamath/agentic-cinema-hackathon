@@ -14,6 +14,13 @@ const MAX_SCROLL_SPEED_PX_PER_SEC = 35;
 // the player) seeked, not that time is progressing normally - seeks should
 // still resync instantly, only normal playback is speed-capped.
 const SEEK_JUMP_THRESHOLD_SEC = 1.5;
+// A timeline jump lands the card fully inside the feed window with this much
+// room below it, rather than flush against the bottom edge where it reads as
+// half-arrived and the next item is already crowding in.
+const TIMELINE_JUMP_BOTTOM_MARGIN_PX = 16;
+// How long the feed stays pinned to a jumped-to card while waiting for the
+// player to reach the seek target, before giving up and resuming normal sync.
+const SEEK_PIN_TIMEOUT_MS = 3000;
 
 const ICONS = {
   thumbsUp:
@@ -225,6 +232,13 @@ export function mountPanel(
     // apart from normal playback advancing.
     lastFrameTime: null,
     lastCurrentTime: null,
+    // Set when a Fact Timeline entry is clicked. player.seekTo() is async,
+    // so for a frame or more afterwards playback.currentTime still reports
+    // the *old* position - long enough for glideLoop's seek detection to
+    // fire and overwrite the precise card position with the generic
+    // proportional one. Holding the intended scroll position here until the
+    // player actually arrives is what makes the jump land on the card.
+    pendingSeek: null,
   };
 
   const renderedNodes = new Map();
@@ -239,6 +253,7 @@ export function mountPanel(
   jumpButton.innerHTML = `<span>Jump back</span>`;
   jumpButton.addEventListener("click", () => {
     state.autoGlide = true;
+    state.pendingSeek = null;
     jumpButton.classList.remove("visible");
     scrollToTarget({ smooth: true });
   });
@@ -287,26 +302,22 @@ export function mountPanel(
         // formula is only an approximation (content isn't evenly dense
         // across the video), so it can land noticeably past where this
         // specific card actually sits.
-        const node = renderedNodes.get(insight.id);
-        if (node) {
-          // offsetTop is relative to the nearest *positioned* ancestor, and
-          // nothing between here and <body> is positioned - it'd resolve to
-          // page coordinates, not container's own scroll coordinates.
-          // getBoundingClientRect diffing works regardless of that chain.
-          const nodeTop = node.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-          const target = Math.max(0, nodeTop + node.offsetHeight - container.clientHeight);
+        const target = revealTargetFor(insight.id);
+        if (target != null) {
           state.lastTarget = target;
           container.scrollTop = target;
+          // Held until the player reports it has actually reached
+          // insight.timestamp_seconds. Until then glideLoop re-pins this
+          // exact position every frame instead of running its seek-resync
+          // or catch-up branches, both of which would drag the feed to the
+          // generic time-proportional target and lose the card.
+          state.pendingSeek = {
+            id: insight.id,
+            seconds: insight.timestamp_seconds,
+            expiresAt: performance.now() + SEEK_PIN_TIMEOUT_MS,
+          };
         }
 
-        // Recording the seek's destination ourselves (rather than reading
-        // currentTime back from the player, which may not have updated yet)
-        // is what keeps glideLoop's next frame from treating this as a
-        // fresh seek and re-snapping to that generic target, undoing the
-        // precise position above. With autoGlide left on, playback still
-        // playing continues the normal capped catch-up glide from exactly
-        // here; paused, nothing moves it further - matches whichever state
-        // the video was actually in when this was clicked.
         state.lastCurrentTime = insight.timestamp_seconds;
         state.autoGlide = true;
         jumpButton.classList.remove("visible");
@@ -328,12 +339,92 @@ export function mountPanel(
   // with no memory of "where we came from". That's what makes it immune to
   // pausing, seeking, and playback-speed changes: however currentTime got
   // to its current value, this is always the correct proportional position.
+  // Where the feed should sit for `currentTime`, derived from where the
+  // content actually is rather than from elapsed time. Comments cluster
+  // heavily around a few moments (a popular video can have 70+ comments
+  // timestamped inside its first minute), so time and scroll position are
+  // badly non-linear - a purely proportional formula puts the feed hundreds
+  // of pixels away from the item the video is actually on.
+  function contentTargetFor(currentTime) {
+    const seq = state.sequence;
+    if (!seq.length) return null;
+
+    // Last item at or before currentTime - the one that has just been
+    // revealed. seq is sorted by effectiveTimestamp, so this is a binary
+    // search rather than a scan of every comment on every frame.
+    let lo = 0;
+    let hi = seq.length - 1;
+    let idx = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (seq[mid].effectiveTimestamp <= currentTime) {
+        idx = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    if (idx < 0) return 0;
+
+    const curTarget = revealTargetFor(seq[idx].id);
+    if (curTarget == null) return null;
+
+    // Interpolating toward the next item's position is what keeps playback
+    // gliding smoothly instead of jumping one item at a time.
+    const next = seq[idx + 1];
+    if (!next) return curTarget;
+    const nextTarget = revealTargetFor(next.id);
+    if (nextTarget == null) return curTarget;
+
+    const span = next.effectiveTimestamp - seq[idx].effectiveTimestamp;
+    if (span <= 0) return curTarget;
+    const fraction = Math.min(1, Math.max(0, (currentTime - seq[idx].effectiveTimestamp) / span));
+    return curTarget + (nextTarget - curTarget) * fraction;
+  }
+
   function baseTargetFor(playback) {
     if (!playback || !playback.duration) return 0;
     const maxScroll = container.scrollHeight - container.clientHeight;
     if (maxScroll <= 0) return 0;
+
+    if (state.merged) {
+      const contentTarget = contentTargetFor(playback.currentTime);
+      if (contentTarget != null) return contentTarget;
+    }
+
+    // Before the merge there are no positioned items to anchor to, so the
+    // proportional estimate is all that's available.
     const fraction = Math.min(1, Math.max(0, playback.currentTime / playback.duration));
     return fraction * maxScroll;
+  }
+
+  // Where the feed must sit for `itemId` to be fully visible, with
+  // a little room below it. Recomputed from the node's live position rather
+  // than cached, because avatars above it load lazily and change the heights
+  // between the click and the player actually arriving.
+  function revealTargetFor(itemId) {
+    const node = renderedNodes.get(itemId);
+    if (!node) return null;
+
+    // offsetTop is relative to the nearest *positioned* ancestor, and nothing
+    // between here and <body> is positioned - it'd resolve to page
+    // coordinates, not container's own scroll coordinates.
+    // getBoundingClientRect diffing works regardless of that chain.
+    const nodeTop = node.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    const nodeHeight = node.offsetHeight;
+
+    // A card taller than the window can't be bottom-aligned without pushing
+    // its own headline out of view, so those align to the top instead.
+    const target =
+      nodeHeight + TIMELINE_JUMP_BOTTOM_MARGIN_PX > container.clientHeight
+        ? nodeTop
+        : nodeTop + nodeHeight + TIMELINE_JUMP_BOTTOM_MARGIN_PX - container.clientHeight;
+
+    // Clamped to what the container can actually scroll to: `state.lastTarget`
+    // has to match the real scrollTop, or handleScroll reads the browser's own
+    // clamping as the viewer scrolling and switches autoGlide off.
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+    return Math.min(maxScroll, Math.max(0, target));
   }
 
   // Scroll position deviating from `state.lastTarget` (the position we last
@@ -355,6 +446,9 @@ export function mountPanel(
     if (scrollSuspended) return;
     if (Math.abs(container.scrollTop - state.lastTarget) > SCROLL_TOLERANCE_PX) {
       state.autoGlide = false;
+      // The viewer scrolling away abandons the jump - otherwise the pin would
+      // still be live and would yank them back to the card on "Jump back".
+      state.pendingSeek = null;
       jumpButton.classList.add("visible");
     }
   }
@@ -515,7 +609,27 @@ export function mountPanel(
       rescaleComments(playback.duration);
     }
 
-    if (state.autoGlide && playback && playback.duration) {
+    if (state.autoGlide && playback && playback.duration && state.pendingSeek) {
+      // Re-pinned every frame (not just set once) so lazily-loading avatars
+      // reflowing the content above the card can't drift it out of the
+      // window while we wait for the player.
+      const target = revealTargetFor(state.pendingSeek.id);
+      if (target == null) {
+        state.pendingSeek = null;
+      } else {
+        state.lastTarget = target;
+        container.scrollTop = target;
+
+        const arrived =
+          Math.abs(playback.currentTime - state.pendingSeek.seconds) <= SEEK_JUMP_THRESHOLD_SEC;
+        // The deadline covers a seek that never lands - a rejected seek, or
+        // the viewer scrubbing elsewhere before this one resolved. Without it
+        // the feed would stay pinned to a card the video already left.
+        if (arrived || now >= state.pendingSeek.expiresAt) {
+          state.pendingSeek = null;
+        }
+      }
+    } else if (state.autoGlide && playback && playback.duration) {
       const idealTarget = baseTargetFor(playback);
       const seeked =
         state.lastCurrentTime != null &&
