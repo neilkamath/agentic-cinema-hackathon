@@ -202,6 +202,110 @@ body {
   border-bottom: 1px solid #272727;
 }
 
+.fact-timeline {
+  flex: 0 0 auto;
+  border-bottom: 1px solid #272727;
+  background: linear-gradient(180deg, #1c1c1c, #161616);
+}
+
+.fact-timeline-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  padding: var(--size-2) var(--size-4);
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fact-timeline-title {
+  flex: 1;
+  text-align: left;
+}
+
+.fact-timeline-count {
+  padding: 1px 6px;
+  border-radius: var(--radius-round);
+  background: var(--accent-border);
+  font-size: 10px;
+}
+
+.fact-timeline-toggle svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s var(--ease-2);
+}
+
+.fact-timeline.expanded .fact-timeline-toggle svg {
+  transform: rotate(180deg);
+}
+
+.fact-timeline-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s var(--ease-2);
+}
+
+.fact-timeline.expanded .fact-timeline-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.fact-timeline-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  padding: var(--size-2) var(--size-4);
+  border: none;
+  border-top: 1px solid #1e1e1e;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s var(--ease-2);
+}
+
+.fact-timeline-item:hover {
+  background: var(--accent-soft);
+}
+
+.fact-timeline-item-icon {
+  flex: 0 0 auto;
+  display: flex;
+  color: var(--accent-text);
+}
+
+.fact-timeline-item-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fact-timeline-item-headline {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #e1e1e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fact-timeline-item-time {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-text);
+}
+
 #panel {
   flex: 1;
   overflow-y: auto;

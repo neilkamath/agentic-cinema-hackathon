@@ -42,6 +42,12 @@ function getPlaybackState() {
   };
 }
 
+function seekTo(seconds) {
+  if (player && typeof player.seekTo === "function") {
+    player.seekTo(seconds, true);
+  }
+}
+
 function setupResizableDivider(panelHandle) {
   const app = document.getElementById("app");
   const chatColumn = document.getElementById("chat-column");
@@ -121,6 +127,7 @@ async function loadVideoMeta() {
   const panelHandle = mountPanel(document.getElementById("panel"), {
     videoId,
     getPlaybackState,
+    seekTo,
     summary: data.summary,
     insights: data.insights,
     preloadedComments: preload?.comments,

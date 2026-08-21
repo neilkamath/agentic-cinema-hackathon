@@ -48,6 +48,16 @@ const RELATIVE_TIME_UNITS = [
   ["minute", 60],
 ];
 
+function formatTimestamp(seconds) {
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  const mm = hours > 0 ? String(minutes).padStart(2, "0") : String(minutes);
+  const ss = String(secs).padStart(2, "0");
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
 function formatRelativeTime(isoString) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
   for (const [name, secondsInUnit] of RELATIVE_TIME_UNITS) {
@@ -172,7 +182,7 @@ function renderInsightCard(insight) {
 
 export function mountPanel(
   container,
-  { videoId, getPlaybackState, onReady, summary, insights, preloadedComments }
+  { videoId, getPlaybackState, seekTo, onReady, summary, insights, preloadedComments }
 ) {
   container.innerHTML = "";
   const list = document.createElement("div");
@@ -233,6 +243,85 @@ export function mountPanel(
     scrollToTarget({ smooth: true });
   });
   (container.parentElement || container).appendChild(jumpButton);
+
+  // Only fact cards with a real transcript-anchored timestamp get a timeline
+  // entry - an interpolated one (e.g. a music video's description-only
+  // cards) isn't actually "placed" anywhere in the video, so listing it here
+  // would imply a real moment that doesn't exist. Inserted as a sibling of
+  // `container`, right above the scrollable feed, so it stays put - not part
+  // of what scrolls - and is always reachable regardless of feed position.
+  const timestampedInsights = (insights || [])
+    .filter((i) => i.timestamp_seconds != null)
+    .sort((a, b) => a.timestamp_seconds - b.timestamp_seconds);
+
+  if (timestampedInsights.length > 0) {
+    const timeline = document.createElement("div");
+    timeline.className = "fact-timeline";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "fact-timeline-toggle";
+    toggle.innerHTML = `
+      <span class="fact-timeline-title">Fact Timeline</span>
+      <span class="fact-timeline-count">${timestampedInsights.length}</span>
+      ${ICONS.arrowDown}
+    `;
+    timeline.appendChild(toggle);
+
+    const timelineList = document.createElement("div");
+    timelineList.className = "fact-timeline-list";
+    for (const insight of timestampedInsights) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "fact-timeline-item";
+      item.innerHTML = `
+        <span class="fact-timeline-item-icon">${ICONS[insight.category] || ICONS.did_you_know}</span>
+        <span class="fact-timeline-item-headline">${insight.headline}</span>
+        <span class="fact-timeline-item-time">${formatTimestamp(insight.timestamp_seconds)}</span>
+      `;
+      item.addEventListener("click", () => {
+        seekTo?.(insight.timestamp_seconds);
+
+        // Land exactly on this card's own rendered position, not the
+        // generic time-proportional scroll target glideLoop uses - that
+        // formula is only an approximation (content isn't evenly dense
+        // across the video), so it can land noticeably past where this
+        // specific card actually sits.
+        const node = renderedNodes.get(insight.id);
+        if (node) {
+          // offsetTop is relative to the nearest *positioned* ancestor, and
+          // nothing between here and <body> is positioned - it'd resolve to
+          // page coordinates, not container's own scroll coordinates.
+          // getBoundingClientRect diffing works regardless of that chain.
+          const nodeTop = node.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+          const target = Math.max(0, nodeTop + node.offsetHeight - container.clientHeight);
+          state.lastTarget = target;
+          container.scrollTop = target;
+        }
+
+        // Recording the seek's destination ourselves (rather than reading
+        // currentTime back from the player, which may not have updated yet)
+        // is what keeps glideLoop's next frame from treating this as a
+        // fresh seek and re-snapping to that generic target, undoing the
+        // precise position above. With autoGlide left on, playback still
+        // playing continues the normal capped catch-up glide from exactly
+        // here; paused, nothing moves it further - matches whichever state
+        // the video was actually in when this was clicked.
+        state.lastCurrentTime = insight.timestamp_seconds;
+        state.autoGlide = true;
+        jumpButton.classList.remove("visible");
+        timeline.classList.remove("expanded");
+      });
+      timelineList.appendChild(item);
+    }
+    timeline.appendChild(timelineList);
+
+    toggle.addEventListener("click", () => {
+      timeline.classList.toggle("expanded");
+    });
+
+    container.parentElement.insertBefore(timeline, container);
+  }
 
   // The scroll position that exactly matches the video's current state -
   // a pure function of currentTime/duration, recomputed fresh every call
