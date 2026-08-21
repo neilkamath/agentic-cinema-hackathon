@@ -285,29 +285,40 @@ export function mountPanel(
   // Only fact cards with a real transcript-anchored timestamp get a timeline
   // entry - an interpolated one (e.g. a music video's description-only
   // cards) isn't actually "placed" anywhere in the video, so listing it here
-  // would imply a real moment that doesn't exist. Inserted as a sibling of
-  // `container`, right above the scrollable feed, so it stays put - not part
-  // of what scrolls - and is always reachable regardless of feed position.
+  // would imply a real moment that doesn't exist. The toggle lives inline in
+  // the "Streamed Chat" label row; the list itself is an absolutely
+  // positioned overlay anchored to that row, so opening it floats over the
+  // feed instead of pushing it down, and closing it costs no layout at all.
   const timestampedInsights = (insights || [])
     .filter((i) => i.timestamp_seconds != null)
     .sort((a, b) => a.timestamp_seconds - b.timestamp_seconds);
+  // Not tied to a real moment (music videos, or any video without a
+  // transcript to anchor to) - still worth surfacing, just honestly: jumping
+  // to one scrolls the feed to where its card sits, it doesn't seek the
+  // video, since there's no real timestamp to seek to.
+  const untimestampedInsights = (insights || []).filter((i) => i.timestamp_seconds == null);
 
-  if (timestampedInsights.length > 0) {
-    const timeline = document.createElement("div");
-    timeline.className = "fact-timeline";
+  const panelLabel = (container.parentElement || container).querySelector(".panel-label");
 
+  if ((timestampedInsights.length > 0 || untimestampedInsights.length > 0) && panelLabel) {
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "fact-timeline-toggle";
     toggle.innerHTML = `
-      <span class="fact-timeline-title">Fact Timeline</span>
-      <span class="fact-timeline-count">${timestampedInsights.length}</span>
+      <span class="fact-timeline-count">${timestampedInsights.length || untimestampedInsights.length}</span>
+      <span>Fact Timeline</span>
       ${ICONS.arrowDown}
     `;
-    timeline.appendChild(toggle);
+    panelLabel.appendChild(toggle);
 
     const timelineList = document.createElement("div");
     timelineList.className = "fact-timeline-list";
+
+    function closeTimeline() {
+      timelineList.classList.remove("visible");
+      toggle.classList.remove("active");
+    }
+
     for (const insight of timestampedInsights) {
       const item = document.createElement("button");
       item.type = "button";
@@ -344,17 +355,58 @@ export function mountPanel(
         state.lastCurrentTime = insight.timestamp_seconds;
         state.autoGlide = true;
         jumpButton.classList.remove("visible");
-        timeline.classList.remove("expanded");
+        closeTimeline();
       });
       timelineList.appendChild(item);
     }
-    timeline.appendChild(timelineList);
+
+    if (untimestampedInsights.length > 0) {
+      const divider = document.createElement("div");
+      divider.className = "fact-timeline-divider";
+      divider.textContent = "General facts";
+      timelineList.appendChild(divider);
+
+      for (const insight of untimestampedInsights) {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "fact-timeline-item";
+        item.innerHTML = `
+          <span class="fact-timeline-item-icon">${ICONS[insight.category] || ICONS.did_you_know}</span>
+          <span class="fact-timeline-item-headline">${insight.headline}</span>
+        `;
+        item.addEventListener("click", () => {
+          // No seekTo, no pendingSeek pin - there's no real video moment to
+          // hold the feed at, so this just scrolls to wherever this card's
+          // interpolated position happens to be, once.
+          const target = revealTargetFor(insight.id);
+          if (target != null) {
+            state.lastTarget = target;
+            container.scrollTop = target;
+          }
+          state.autoGlide = false;
+          jumpButton.classList.add("visible");
+          closeTimeline();
+        });
+        timelineList.appendChild(item);
+      }
+    }
+    panelLabel.appendChild(timelineList);
 
     toggle.addEventListener("click", () => {
-      timeline.classList.toggle("expanded");
+      const willBeVisible = !timelineList.classList.contains("visible");
+      timelineList.classList.toggle("visible", willBeVisible);
+      toggle.classList.toggle("active", willBeVisible);
     });
 
-    container.parentElement.insertBefore(timeline, container);
+    // It overlaps the feed now instead of living in its own reserved space,
+    // so a click anywhere else (comments underneath it, the player) should
+    // dismiss it rather than leave it floating over content the viewer is
+    // trying to interact with.
+    document.addEventListener("click", (e) => {
+      if (!timelineList.classList.contains("visible")) return;
+      if (toggle.contains(e.target) || timelineList.contains(e.target)) return;
+      closeTimeline();
+    });
   }
 
   // The scroll position that exactly matches the video's current state -
