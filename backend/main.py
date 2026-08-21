@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import anyio
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -47,6 +47,21 @@ async def poll_comments(video_id: str, body: PollRequest):
 
     cursor = max(c["published_at"] for c in new_comments)
     return {"comments": new_comments, "cursor": cursor}
+
+
+@app.get("/video/{video_id}")
+async def get_video(video_id: str):
+    # Lightweight metadata lookup so a pasted link can show a real title and
+    # channel in the start modal without paying for the full insights run.
+    try:
+        metadata = await anyio.to_thread.run_sync(fetch_video_metadata, video_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="video not found")
+    return {
+        "video_id": video_id,
+        "title": metadata["title"],
+        "channel_title": metadata["channel_title"],
+    }
 
 
 @app.get("/video/{video_id}/insights")
