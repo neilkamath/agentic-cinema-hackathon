@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sidecast</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+  />
+  <link rel="stylesheet" href="https://unpkg.com/open-props" />
+  <link rel="stylesheet" href="panel/panel.css" />
+  <link rel="stylesheet" href="how-to.css" />
+</head>
+<body>
+  <a class="icon-back-button" href="index.html" aria-label="Back to Sidecast" title="Back to Sidecast">&larr;</a>
+
+  <div class="howto-page">
+    <img class="home-logo" src="favicon.svg" alt="" />
+    <div class="howto-title">How Sidecast Works</div>
+    <div class="howto-tagline">A synced comment feed and fact cards, right alongside the video.</div>
+
+    <div class="howto-steps">
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polygon points="10,9 10,15 15,12" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Pick a video</strong> from the homepage, or paste any YouTube link.</div>
+      </div>
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Hit Start Sidecast.</strong> Comments and fact cards load before the video even opens.</div>
+      </div>
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Watch and scroll along.</strong> The feed glides in sync with playback, at a comfortable reading pace.</div>
+      </div>
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Jump around</strong> with the Fact Timeline next to "Streamed Chat" - click any fact to seek straight to that moment.</div>
+      </div>
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Scroll away anytime</strong> to read at your own pace - it pauses the sync. Hit "Jump back" whenever you want to catch back up.</div>
+      </div>
+      <div class="howto-step">
+        <div class="howto-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </div>
+        <div class="howto-step-text"><strong>Dig deeper on any fact.</strong> Every fact card links out to a real external source - tap "source" to read the full story.</div>
+      </div>
+    </div>
+
+    <div class="howto-limitation">
+      <div class="howto-limitation-label">Good to know</div>
+      <p>
+        Time-synced fact cards - tied to a real moment in the video - currently work reliably for our two
+        <span class="howto-badge">Synced</span> picks, Hot Ones and Veritasium. YouTube blocks transcript access
+        from our server's network for other videos, so those still get fully synced comments, just general fact
+        cards instead of moment-anchored ones. We're working on lifting this for every video.
+      </p>
+    </div>
+
+    <div class="howto-limitation">
+      <div class="howto-limitation-label">Also good to know</div>
+      <p>
+        The comment feed is mechanically filtered before it ever reaches you - no AI judging what's "good."
+        Bare timestamps with nothing else attached, near-duplicate copy-paste comments, and promotional/spam
+        links all get dropped automatically, so what's left is real commentary.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
