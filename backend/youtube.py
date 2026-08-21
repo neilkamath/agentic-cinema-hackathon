@@ -1,5 +1,6 @@
 import os
 import re
+from urllib.parse import urlparse
 
 import requests
 
@@ -10,6 +11,11 @@ VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 # Matches "mm:ss" or "h:mm:ss" (e.g. "12:34" or "1:02:34"), the format
 # viewers actually type when referencing a moment in the video.
 _TIMESTAMP_RE = re.compile(r"\b(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)\b")
+
+# Catches "http://...", "https://...", and bare "www.something" - the shapes
+# spam/promo comments actually use to link off-platform.
+_URL_RE = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
+_YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
 
 
 def _extract_timestamp_seconds(text: str) -> int | None:
@@ -40,20 +46,39 @@ def _is_bare_timestamp(text: str, timestamp_seconds: int | None) -> bool:
     return _substantive_text(remainder) == ""
 
 
+def _has_promo_link(text: str) -> bool:
+    for match in _URL_RE.finditer(text):
+        url = match.group()
+        host = urlparse(url if url.lower().startswith("http") else f"http://{url}").hostname or ""
+        if host.lower().removeprefix("www.") not in _YOUTUBE_HOSTS:
+            return True
+    return False
+
+
+def _word_set_key(text: str) -> frozenset[str]:
+    # Bag of significant words, ignoring order, repeat count, punctuation,
+    # and emoji - two comments that only differ by "sooo" vs "so", extra
+    # emoji, or word order collapse to the same key, which exact-string
+    # matching misses entirely.
+    words = _substantive_text(text).lower().split()
+    return frozenset(w for w in words if len(w) > 1)
+
+
 def _filter_comments(comments: list[dict]) -> list[dict]:
-    seen_text = set()
+    seen_word_sets = set()
     filtered = []
     for c in comments:
         if _is_bare_timestamp(c["text"], c["timestamp_seconds"]):
             continue
-        # Only dedupe on comments that have real content - an empty
-        # normalized key (e.g. an emoji-only comment) isn't a reliable
+        if _has_promo_link(c["text"]):
+            continue
+        # An empty key (e.g. an emoji-only comment) isn't a reliable
         # fingerprint, since unrelated comments could collide on it.
-        key = _substantive_text(c["text"]).lower()
-        if key:
-            if key in seen_text:
+        words = _word_set_key(c["text"])
+        if words:
+            if words in seen_word_sets:
                 continue
-            seen_text.add(key)
+            seen_word_sets.add(words)
         filtered.append(c)
     return filtered
 
