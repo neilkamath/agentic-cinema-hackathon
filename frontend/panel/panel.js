@@ -170,7 +170,10 @@ function renderInsightCard(insight) {
   return row;
 }
 
-export function mountPanel(container, { videoId, getPlaybackState, onReady, summary, insights }) {
+export function mountPanel(
+  container,
+  { videoId, getPlaybackState, onReady, summary, insights, preloadedComments }
+) {
   container.innerHTML = "";
   const list = document.createElement("div");
   list.className = "comment-list";
@@ -484,8 +487,10 @@ export function mountPanel(container, { videoId, getPlaybackState, onReady, summ
   }
 
   async function loadInitial() {
-    const res = await fetch(`${API_BASE}/comments/${videoId}`);
-    const data = await res.json();
+    // A caller that already fetched comments (the homepage's start popup,
+    // so the watch page opens fully populated) passes them straight in -
+    // skips the redundant network round trip instead of re-fetching.
+    const data = preloadedComments || (await (await fetch(`${API_BASE}/comments/${videoId}`)).json());
 
     state.cursor = data.cursor;
     state.comments = data.comments;

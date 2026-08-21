@@ -83,16 +83,37 @@ function setupResizableDivider(panelHandle) {
   divider.addEventListener("pointercancel", stopDragging);
 }
 
-// The insights call is the expensive part (Gemini + Parallel Search), so it
-// doesn't fire on page load - only once the viewer deliberately clicks in.
-// Until then, the video and the back button are already fully usable, so a
-// misclick into the wrong video costs nothing to back out of.
-async function loadVideoMeta() {
-  const startFeed = document.getElementById("start-feed");
-  startFeed.innerHTML = `<div class="loading-spinner"></div><div id="start-feed-hint">Setting up Sidecast…</div>`;
+// The homepage's start popup may have already fetched both comments and
+// insights before navigating here, so this page opens fully populated
+// instead of loading anything itself. One-time use - if the viewer comes
+// back to this same page later (back/forward, refresh), it's stale.
+const PRELOAD_KEY = `sidecast:preload:${videoId}`;
+let preload = null;
+const preloadRaw = sessionStorage.getItem(PRELOAD_KEY);
+if (preloadRaw) {
+  sessionStorage.removeItem(PRELOAD_KEY);
+  try {
+    preload = JSON.parse(preloadRaw);
+  } catch (err) {
+    console.error("failed to parse preloaded data, falling back to a normal load", err);
+  }
+}
 
-  const res = await fetch(`${API_BASE}/video/${videoId}/insights`);
-  const data = await res.json();
+// The insights call is the expensive part (Gemini + Parallel Search), so it
+// doesn't fire on page load - only once the viewer deliberately clicks in
+// (or immediately, if the data was already preloaded from the homepage).
+// Until it does, the video and the back button are already fully usable, so
+// a misclick into the wrong video costs nothing to back out of.
+async function loadVideoMeta() {
+  let data;
+  if (preload) {
+    data = preload.insights;
+  } else {
+    const startFeed = document.getElementById("start-feed");
+    startFeed.innerHTML = `<div class="loading-spinner"></div><div id="start-feed-hint">Setting up Sidecast…</div>`;
+    const res = await fetch(`${API_BASE}/video/${videoId}/insights`);
+    data = await res.json();
+  }
 
   document.getElementById("video-title").textContent = data.title;
   document.getElementById("video-channel").textContent = data.channel_title;
@@ -102,9 +123,14 @@ async function loadVideoMeta() {
     getPlaybackState,
     summary: data.summary,
     insights: data.insights,
+    preloadedComments: preload?.comments,
   });
 
   setupResizableDivider(panelHandle);
 }
 
-document.getElementById("start-feed-button").addEventListener("click", loadVideoMeta, { once: true });
+if (preload) {
+  loadVideoMeta();
+} else {
+  document.getElementById("start-feed-button").addEventListener("click", loadVideoMeta, { once: true });
+}

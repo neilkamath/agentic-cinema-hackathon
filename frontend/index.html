@@ -19,7 +19,23 @@
 
   <div class="video-grid" id="video-grid"></div>
 
+  <div id="modal-backdrop">
+    <div id="modal-card">
+      <a id="modal-back" class="icon-back-button" href="#" aria-label="Close" title="Close">&larr;</a>
+      <div id="modal-thumb">
+        <img id="modal-thumb-img" src="" alt="" />
+        <button id="modal-start-button" type="button">Start Sidecast</button>
+      </div>
+      <div id="modal-info">
+        <div id="modal-channel"></div>
+        <div id="modal-title"></div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
+    import { API_BASE } from "./panel/panel.js";
+
     const VIDEOS = [
       {
         id: "mc9WVVAUQGE",
@@ -43,13 +59,17 @@
     // loaded locally or from the eventual hosted link.
     const api = new URLSearchParams(location.search).get("api");
 
+    function watchUrl(videoId) {
+      const params = new URLSearchParams({ v: videoId });
+      if (api) params.set("api", api);
+      return `webapp/index.html?${params.toString()}`;
+    }
+
     const grid = document.getElementById("video-grid");
     for (const video of VIDEOS) {
       const card = document.createElement("a");
       card.className = "video-card";
-      const params = new URLSearchParams({ v: video.id });
-      if (api) params.set("api", api);
-      card.href = `webapp/index.html?${params.toString()}`;
+      card.href = watchUrl(video.id);
 
       card.innerHTML = `
         <div class="video-thumb">
@@ -60,8 +80,85 @@
           <div class="video-title">${video.title}</div>
         </div>
       `;
+      // A real link (so right-click / open-in-new-tab still works and
+      // falls back to the watch page's own start button), but a plain
+      // click opens the start popup instead of navigating immediately.
+      card.addEventListener("click", (e) => {
+        e.preventDefault();
+        openModal(video);
+      });
       grid.appendChild(card);
     }
+
+    const backdrop = document.getElementById("modal-backdrop");
+    const modalBack = document.getElementById("modal-back");
+    const modalThumb = document.getElementById("modal-thumb");
+    const modalThumbImg = document.getElementById("modal-thumb-img");
+    const modalStartButton = document.getElementById("modal-start-button");
+    const modalChannel = document.getElementById("modal-channel");
+    const modalTitle = document.getElementById("modal-title");
+
+    let activeVideo = null;
+
+    function openModal(video) {
+      activeVideo = video;
+      modalThumbImg.src = `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`;
+      modalThumbImg.alt = video.title;
+      modalChannel.textContent = video.channel;
+      modalTitle.textContent = video.title;
+      modalThumb.innerHTML = "";
+      modalThumb.appendChild(modalThumbImg);
+      modalThumb.appendChild(modalStartButton);
+      modalStartButton.disabled = false;
+      modalStartButton.textContent = "Start Sidecast";
+      backdrop.classList.add("visible");
+    }
+
+    function closeModal() {
+      backdrop.classList.remove("visible");
+      activeVideo = null;
+    }
+
+    modalBack.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeModal();
+    });
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && backdrop.classList.contains("visible")) closeModal();
+    });
+
+    // Fetch comments and insights (the expensive Gemini + Parallel Search
+    // part) here, before navigating - so by the time the watch page opens,
+    // the player, comments, and fact cards are all already ready, instead
+    // of the viewer landing on a page that then has to load.
+    modalStartButton.addEventListener("click", async () => {
+      const video = activeVideo;
+      if (!video) return;
+
+      modalStartButton.disabled = true;
+      modalThumb.innerHTML = `
+        <div class="modal-loading">
+          <div class="loading-spinner"></div>
+          <div>Setting up Sidecast…</div>
+        </div>
+      `;
+
+      try {
+        const [commentsRes, insightsRes] = await Promise.all([
+          fetch(`${API_BASE}/comments/${video.id}`),
+          fetch(`${API_BASE}/video/${video.id}/insights`),
+        ]);
+        const [comments, insights] = await Promise.all([commentsRes.json(), insightsRes.json()]);
+        sessionStorage.setItem(`sidecast:preload:${video.id}`, JSON.stringify({ comments, insights }));
+      } catch (err) {
+        console.error("preload failed, watch page will load its own data", err);
+      }
+
+      location.href = watchUrl(video.id);
+    });
   </script>
 </body>
 </html>
