@@ -1,9 +1,9 @@
 """Fetch and cache a video's transcript for the curated demo set.
 
-YouTube's transcript CDN blocks Cloud Run's IP range, so any video used in
-the hosted demo needs its transcript pre-fetched from an unblocked network
-(e.g. a local machine) and committed as a static cache file. Run this
-whenever a new curated demo video is added:
+YouTube blocks transcript requests from Cloud Run's IP range - arbitrary
+videos rely on the proxy configured in transcript.py, but the curated demo
+set is committed as static cache files so it stays fast and keeps working
+even if the proxy is down. Run this whenever a curated demo video is added:
 
     python scripts/cache_transcript.py <video_id>
 """

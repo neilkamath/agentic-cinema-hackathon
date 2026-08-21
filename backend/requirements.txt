@@ -1,7 +1,7 @@
 google-cloud-aiplatform[adk,agent_engines]>=1.101.0
 parallel-web
 requests
-youtube-transcript-api
+youtube-transcript-api>=1.2
 pydantic
 fastapi
 uvicorn[standard]
