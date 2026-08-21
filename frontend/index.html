@@ -69,10 +69,12 @@
         title: "Something About Us",
         channel: "Daft Punk",
       },
+      {
+        id: "irVNGjRFZGk",
+        title: "Avengers: Doomsday | Official Trailer | In Theaters December 18",
+        channel: "Marvel Entertainment",
+      },
     ];
-
-    const SYNC_ICON =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 
     // Local dev points the watch page at a local backend via ?api=...;
     // carry that through so this homepage works the same way whether it's
@@ -92,7 +94,7 @@
       card.href = watchUrl(video.id);
 
       const syncBadge = video.timeSynced
-        ? `<div class="sync-badge" title="Fact cards are synced to real moments in this video">${SYNC_ICON}</div>`
+        ? `<div class="sync-badge" title="Fact cards are synced to real moments in this video"><span>Synced</span></div>`
         : "";
       card.innerHTML = `
         <div class="video-thumb">
