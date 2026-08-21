@@ -14,12 +14,6 @@
 </head>
 <body>
   <div id="app">
-    <div id="loading-overlay">
-      <div class="loading-overlay-inner">
-        <div class="loading-spinner"></div>
-        <div class="loading-overlay-text">Setting up Sidecast…</div>
-      </div>
-    </div>
     <div id="main">
       <div id="video-header">
         <a id="back-link" href="../index.html" aria-label="Back to Sidecast" title="Back to Sidecast">&larr;</a>
@@ -33,7 +27,12 @@
     <div id="divider"></div>
     <div id="chat-column">
       <div class="panel-label">Streamed Chat</div>
-      <div id="panel"></div>
+      <div id="panel">
+        <div id="start-feed">
+          <button id="start-feed-button" type="button">Watch with Sidecast</button>
+          <div id="start-feed-hint">Loads synced comments and fact cards for this video.</div>
+        </div>
+      </div>
     </div>
   </div>
   <script src="https://www.youtube.com/iframe_api"></script>

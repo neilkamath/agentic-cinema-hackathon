@@ -83,7 +83,14 @@ function setupResizableDivider(panelHandle) {
   divider.addEventListener("pointercancel", stopDragging);
 }
 
+// The insights call is the expensive part (Gemini + Parallel Search), so it
+// doesn't fire on page load - only once the viewer deliberately clicks in.
+// Until then, the video and the back button are already fully usable, so a
+// misclick into the wrong video costs nothing to back out of.
 async function loadVideoMeta() {
+  const startFeed = document.getElementById("start-feed");
+  startFeed.innerHTML = `<div class="loading-spinner"></div><div id="start-feed-hint">Setting up Sidecast…</div>`;
+
   const res = await fetch(`${API_BASE}/video/${videoId}/insights`);
   const data = await res.json();
 
@@ -95,12 +102,9 @@ async function loadVideoMeta() {
     getPlaybackState,
     summary: data.summary,
     insights: data.insights,
-    onReady: () => {
-      document.getElementById("loading-overlay").classList.add("hidden");
-    },
   });
 
   setupResizableDivider(panelHandle);
 }
 
-loadVideoMeta();
+document.getElementById("start-feed-button").addEventListener("click", loadVideoMeta, { once: true });
