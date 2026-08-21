@@ -10,7 +10,14 @@ body {
   padding: var(--size-8) var(--size-4);
 }
 
+.home-logo {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 4px 18px rgba(132, 94, 247, 0.45));
+}
+
 .home-title {
+  margin-top: var(--size-3);
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -233,6 +240,15 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Beats the rule above on specificity - without this, the loading logo
+   (also an <img> inside #modal-thumb) inherits width/height:100% and fills
+   the whole thumbnail instead of staying icon-sized. */
+#modal-thumb img.loading-spinner {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 #modal-start-button {

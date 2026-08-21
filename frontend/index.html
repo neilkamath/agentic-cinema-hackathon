@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Sidecast</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -14,6 +15,7 @@
   <link rel="stylesheet" href="home.css" />
 </head>
 <body>
+  <img class="home-logo" src="favicon.svg" alt="" />
   <div class="home-title">Sidecast</div>
   <div class="home-tagline">Enjoy any of your favorite videos with synced comments, plus time-synced fact cards for our featured picks.</div>
 
@@ -231,7 +233,7 @@
       modalStartButton.disabled = true;
       modalThumb.innerHTML = `
         <div class="modal-loading">
-          <div class="loading-spinner"></div>
+          <img class="loading-spinner" src="favicon.svg" alt="" />
           <div>Setting up Sidecast…</div>
         </div>
       `;

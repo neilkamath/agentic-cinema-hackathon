@@ -116,7 +116,7 @@ async function loadVideoMeta() {
     data = preload.insights;
   } else {
     const startFeed = document.getElementById("start-feed");
-    startFeed.innerHTML = `<div class="loading-spinner"></div><div id="start-feed-hint">Setting up Sidecast…</div>`;
+    startFeed.innerHTML = `<img class="loading-spinner" src="../favicon.svg" alt="" /><div id="start-feed-hint">Setting up Sidecast…</div>`;
     const res = await fetch(`${API_BASE}/video/${videoId}/insights`);
     data = await res.json();
   }

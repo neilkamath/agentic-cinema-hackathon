@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b197fc" />
+      <stop offset="1" stop-color="#845ef7" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#badge)" />
+  <rect x="10" y="14" width="32" height="36" rx="6" fill="#161616" />
+  <polygon points="20,23 20,41 34,32" fill="#f1f1f1" />
+  <rect x="46" y="14" width="12" height="36" rx="4" fill="#161616" />
+  <rect x="50" y="22" width="4" height="3" rx="1.5" fill="#b197fc" />
+  <rect x="50" y="30" width="4" height="3" rx="1.5" fill="#b197fc" />
+  <rect x="50" y="38" width="4" height="3" rx="1.5" fill="#b197fc" />
+</svg>
