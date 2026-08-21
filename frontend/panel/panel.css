@@ -4,6 +4,14 @@
   --accent-text: #b197fc;
   --accent-soft: rgba(132, 94, 247, 0.14);
   --accent-border: rgba(132, 94, 247, 0.22);
+  --accent-gradient: linear-gradient(180deg, var(--accent-text), var(--accent));
+
+  /* A thin top-edge highlight, the way light catches the top of a glossy
+     surface - layered onto box-shadow alongside a real shadow/glow, never
+     used alone. */
+  --gloss-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --gloss-glow: 0 4px 18px rgba(132, 94, 247, 0.25);
+  --gloss-glow-strong: 0 6px 22px rgba(132, 94, 247, 0.4);
 
   --font-ui: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, "SFMono-Regular", monospace;
@@ -55,16 +63,25 @@ body {
   padding: 10px 20px;
   border: none;
   border-radius: var(--radius-2);
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  box-shadow: var(--gloss-highlight), var(--gloss-glow);
+  transition: box-shadow 0.15s var(--ease-2), transform 0.15s var(--ease-2), filter 0.15s var(--ease-2);
 }
 
 #start-feed-button:hover {
   filter: brightness(1.08);
+  box-shadow: var(--gloss-highlight), var(--gloss-glow-strong);
+  transform: translateY(-1px);
+}
+
+#start-feed-button:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
 }
 
 #start-feed-hint {
@@ -109,7 +126,10 @@ body {
   border-bottom: 1px solid #272727;
 }
 
-#back-link {
+/* Shared by the watch page's back-to-homepage arrow and the homepage
+   picker's own back arrow (in its video-start popup), so both read as the
+   same control. */
+.icon-back-button {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -117,17 +137,21 @@ body {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-2);
-  background: var(--accent-soft);
+  background: linear-gradient(180deg, var(--accent-border), var(--accent-soft));
   border: 1px solid var(--accent-border);
   color: var(--accent-text);
   font-size: 16px;
   line-height: 1;
   text-decoration: none;
-  transition: background 0.15s var(--ease-2);
+  box-shadow: var(--gloss-highlight);
+  backdrop-filter: blur(6px);
+  transition: box-shadow 0.15s var(--ease-2), background 0.15s var(--ease-2);
+  cursor: pointer;
 }
 
-#back-link:hover {
-  background: var(--accent-border);
+.icon-back-button:hover {
+  background: linear-gradient(180deg, var(--accent-border), var(--accent-border));
+  box-shadow: var(--gloss-highlight), var(--gloss-glow);
 }
 
 #video-meta {
@@ -199,7 +223,8 @@ body {
 .summary-card {
   padding: var(--size-4);
   border-bottom: 1px solid #272727;
-  background: #161616;
+  background: linear-gradient(180deg, #1c1c1c, #161616);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .summary-label {
@@ -290,8 +315,9 @@ body {
 .insight-card {
   padding: var(--size-2) var(--size-4);
   border-bottom: 1px solid #1e1e1e;
-  background: var(--accent-soft);
+  background: linear-gradient(180deg, var(--accent-soft), rgba(132, 94, 247, 0.06));
   border-left: 3px solid var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .insight-label {
@@ -368,15 +394,16 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border: none;
+  border: 1px solid var(--accent-border);
   border-radius: var(--radius-round);
-  background: var(--accent);
-  color: #fff;
+  background: linear-gradient(180deg, var(--accent-border), var(--accent-soft));
+  backdrop-filter: blur(6px);
+  color: var(--accent-text);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--gloss-highlight), 0 4px 14px rgba(0, 0, 0, 0.35), var(--gloss-glow);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, 8px);
