@@ -24,8 +24,80 @@ body {
   font-size: 15px;
 }
 
+.paste-form {
+  margin-top: var(--size-7);
+  display: flex;
+  gap: var(--size-2);
+  width: 100%;
+  max-width: 520px;
+}
+
+#paste-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px var(--size-4);
+  border-radius: var(--radius-round);
+  border: 1px solid #272727;
+  background: #161616;
+  color: #f1f1f1;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  transition: border-color 0.15s var(--ease-2), box-shadow 0.15s var(--ease-2);
+}
+
+#paste-input::placeholder {
+  color: #6b6b6b;
+}
+
+#paste-input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: var(--gloss-glow);
+}
+
+#paste-button {
+  flex: none;
+  padding: 11px var(--size-5);
+  border: none;
+  border-radius: var(--radius-round);
+  background: var(--accent-gradient);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--gloss-highlight), var(--gloss-glow);
+  transition: filter 0.15s var(--ease-2), transform 0.15s var(--ease-2);
+}
+
+#paste-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+#paste-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.paste-error {
+  margin-top: var(--size-2);
+  min-height: 18px;
+  font-size: 13px;
+  color: #f2777a;
+}
+
+.home-section-label {
+  margin-top: var(--size-5);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
 .video-grid {
-  margin-top: var(--size-8);
+  margin-top: var(--size-4);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--size-6);

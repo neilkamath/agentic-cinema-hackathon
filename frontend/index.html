@@ -17,6 +17,19 @@
   <div class="home-title">Sidecast</div>
   <div class="home-tagline">Pick a video to watch with synced comments and fact cards.</div>
 
+  <form class="paste-form" id="paste-form" autocomplete="off">
+    <input
+      id="paste-input"
+      type="text"
+      placeholder="Paste a YouTube link or video ID"
+      aria-label="YouTube link or video ID"
+      spellcheck="false"
+    />
+    <button type="submit" id="paste-button">Go</button>
+  </form>
+  <div class="paste-error" id="paste-error"></div>
+
+  <div class="home-section-label">or pick one</div>
   <div class="video-grid" id="video-grid"></div>
 
   <div id="modal-backdrop">
@@ -98,6 +111,74 @@
       });
       grid.appendChild(card);
     }
+
+    // Accepts the shapes people actually paste: a full watch URL, a share
+    // link, a /shorts/ or /embed/ URL, or the bare 11-character ID.
+    function parseVideoId(raw) {
+      const input = raw.trim();
+      if (!input) return null;
+      if (/^[\w-]{11}$/.test(input)) return input;
+
+      let url;
+      try {
+        url = new URL(input.includes("://") ? input : `https://${input}`);
+      } catch {
+        return null;
+      }
+
+      const host = url.hostname.replace(/^www\./, "");
+      if (host === "youtu.be") {
+        const id = url.pathname.slice(1).split("/")[0];
+        return /^[\w-]{11}$/.test(id) ? id : null;
+      }
+      if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "music.youtube.com") {
+        return null;
+      }
+
+      const v = url.searchParams.get("v");
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+
+      const match = url.pathname.match(/^\/(?:shorts|embed|live|v)\/([\w-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    const pasteForm = document.getElementById("paste-form");
+    const pasteInput = document.getElementById("paste-input");
+    const pasteButton = document.getElementById("paste-button");
+    const pasteError = document.getElementById("paste-error");
+
+    pasteInput.addEventListener("input", () => {
+      pasteError.textContent = "";
+    });
+
+    pasteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const videoId = parseVideoId(pasteInput.value);
+      if (!videoId) {
+        pasteError.textContent = "That doesn't look like a YouTube link or video ID.";
+        return;
+      }
+
+      pasteError.textContent = "";
+      pasteButton.disabled = true;
+      pasteButton.textContent = "…";
+
+      // Look the video up before opening the modal so a typo'd-but-valid ID
+      // fails here with a message, instead of opening a modal that then
+      // breaks on the expensive preload.
+      try {
+        const res = await fetch(`${API_BASE}/video/${videoId}`);
+        if (!res.ok) throw new Error(String(res.status));
+        const meta = await res.json();
+        openModal({ id: videoId, title: meta.title, channel: meta.channel_title });
+      } catch (err) {
+        console.error("video lookup failed", err);
+        pasteError.textContent = "Couldn't find that video. Check the link and try again.";
+      } finally {
+        pasteButton.disabled = false;
+        pasteButton.textContent = "Go";
+      }
+    });
 
     const backdrop = document.getElementById("modal-backdrop");
     const modalBack = document.getElementById("modal-back");
