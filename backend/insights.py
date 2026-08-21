@@ -65,7 +65,7 @@ Return a JSON array of exactly {n} objects, each with fields: topic, search_obje
 _SCAN_PROMPT = """Below is a short excerpt from a video's transcript (title: "{title}"), given as numbered, timestamped chunks. Identify any genuinely interesting real-world facts or topics actually mentioned in THIS excerpt that a curious viewer would want to learn more about - the kind of "did you know" moment worth surfacing. Only use what's actually said here - if nothing in this excerpt is genuinely interesting, return an empty array. For each one you find, give:
 - topic: a short description of the fact/topic
 - category (one of: {categories})
-- video_reference: one short sentence paraphrasing what's actually said here that inspired this topic - name who said it if it's clear from context (e.g. "Jon mentioned he played catcher for a baseball team in Russia")
+- video_reference: one short sentence paraphrasing what's actually said here that inspired this topic - name who said it if it's clear from context (e.g. "Jon mentioned he played catcher for a baseball team in Russia"). If the speaker isn't named or clear (e.g. unattributed narration), do NOT invent a placeholder subject like "someone" or "the narrator explains" - just state the fact directly (e.g. "Shade balls are partially filled with water to prevent them from blowing away")
 - quote: a short span (roughly 5-15 words) copied VERBATIM from the chunk where this is discussed - the exact words as they appear, not paraphrased, cleaned up, or stitched together from different places
 - chunk_index: the number of the exact chunk below where this is discussed (must be one of the chunk numbers shown below)
 
