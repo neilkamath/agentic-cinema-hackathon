@@ -191,6 +191,11 @@
     const modalTitle = document.getElementById("modal-title");
 
     let activeVideo = null;
+    // Closing the modal doesn't cancel the in-flight preload fetch below -
+    // it keeps running and navigates once it resolves regardless. Blocking
+    // dismissal while it's in progress avoids the confusing "I cancelled
+    // this" moment where the video page opens anyway a second later.
+    let isStarting = false;
 
     function openModal(video) {
       activeVideo = video;
@@ -203,10 +208,12 @@
       modalThumb.appendChild(modalStartButton);
       modalStartButton.disabled = false;
       modalStartButton.textContent = "Start Sidecast";
+      modalBack.classList.remove("disabled");
       backdrop.classList.add("visible");
     }
 
     function closeModal() {
+      if (isStarting) return;
       backdrop.classList.remove("visible");
       activeVideo = null;
     }
@@ -230,6 +237,8 @@
       const video = activeVideo;
       if (!video) return;
 
+      isStarting = true;
+      modalBack.classList.add("disabled");
       modalStartButton.disabled = true;
       modalThumb.innerHTML = `
         <div class="modal-loading">

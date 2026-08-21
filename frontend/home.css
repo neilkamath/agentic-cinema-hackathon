@@ -227,6 +227,12 @@ body {
   top: var(--size-3);
   left: var(--size-3);
   z-index: 2;
+  transition: opacity 0.15s var(--ease-2);
+}
+
+#modal-back.disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 #modal-thumb {
