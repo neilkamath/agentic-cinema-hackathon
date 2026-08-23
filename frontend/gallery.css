@@ -1,0 +1,442 @@
+/* Styles for gallery.html only.
+ *
+ * This file styles the spec sheet itself - the page chrome, the swatch
+ * grids, the motion tracks. It does not style any real component: those
+ * come from panel.css / home.css / how-to.css so that what the gallery
+ * shows is literally what ships. */
+
+@import url("panel/panel.css");
+@import url("home.css");
+@import url("how-to.css");
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--surface-page);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  display: block;
+  padding: 0;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--size-8);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--size-7) var(--size-5) var(--size-9);
+}
+
+/* Nav ------------------------------------------------------------ */
+
+.g-nav {
+  position: sticky;
+  top: var(--size-7);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.g-nav-title {
+  font-size: var(--size-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--accent-text);
+  margin-bottom: var(--size-1);
+}
+
+.g-nav-sub {
+  font-family: var(--font-mono);
+  font-size: var(--size-3xs);
+  color: var(--text-6);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--size-4);
+}
+
+.g-nav a {
+  padding: 5px var(--size-2);
+  border-radius: var(--radius-2);
+  color: var(--text-4);
+  font-size: var(--size-xs);
+  text-decoration: none;
+  transition: background var(--motion-hover), color var(--motion-hover);
+}
+
+.g-nav a:hover {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* Sections ------------------------------------------------------- */
+
+.g-section {
+  margin-bottom: var(--size-9);
+  scroll-margin-top: var(--size-6);
+}
+
+.g-section-title {
+  font-size: var(--size-title);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-1);
+}
+
+.g-section-note {
+  margin-top: var(--size-2);
+  max-width: 62ch;
+  font-size: var(--size-sm);
+  line-height: var(--leading-loose);
+  color: var(--text-4);
+}
+
+.g-sub {
+  margin: var(--size-6) 0 var(--size-3);
+  font-family: var(--font-mono);
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-5);
+  padding-bottom: var(--size-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Swatches ------------------------------------------------------- */
+
+.g-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--size-3);
+}
+
+.g-swatch {
+  border-radius: var(--radius-3);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-card);
+}
+
+.g-swatch-chip {
+  height: 62px;
+  /* A checker under the chip so alpha tokens read as translucent rather
+     than as a slightly different flat color. */
+  background-image: linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+
+.g-swatch-chip-fill {
+  width: 100%;
+  height: 100%;
+}
+
+.g-swatch-meta {
+  padding: var(--size-2) var(--size-3) var(--size-3);
+}
+
+.g-swatch-name {
+  font-family: var(--font-mono);
+  font-size: var(--size-2xs);
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.g-swatch-value {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--size-3xs);
+  color: var(--text-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.g-swatch-use {
+  margin-top: 6px;
+  font-size: var(--size-3xs);
+  line-height: var(--leading-normal);
+  color: var(--text-5);
+}
+
+/* Type specimens ------------------------------------------------- */
+
+.g-specimen {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4);
+  padding: var(--size-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.g-specimen-tag {
+  flex: 0 0 132px;
+  font-family: var(--font-mono);
+  font-size: var(--size-3xs);
+  color: var(--text-6);
+}
+
+.g-specimen-body {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-1);
+}
+
+/* Motion --------------------------------------------------------- */
+
+.g-motion-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  margin-bottom: var(--size-4);
+}
+
+.g-replay {
+  padding: 7px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-round);
+  background: linear-gradient(180deg, var(--accent-border), var(--accent-soft));
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--gloss-highlight);
+  transition: box-shadow var(--motion-hover), transform var(--motion-hover);
+}
+
+.g-replay:hover {
+  transform: translateY(var(--lift-sm));
+  box-shadow: var(--gloss-highlight), var(--gloss-glow);
+}
+
+.g-motion-hint {
+  font-size: var(--size-xs);
+  color: var(--text-5);
+}
+
+.g-track-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4);
+  padding: var(--size-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.g-track-label {
+  flex: 0 0 152px;
+}
+
+.g-track-name {
+  font-family: var(--font-mono);
+  font-size: var(--size-2xs);
+  color: var(--text-2);
+}
+
+.g-track-use {
+  margin-top: 2px;
+  font-size: var(--size-3xs);
+  color: var(--text-6);
+  line-height: var(--leading-normal);
+}
+
+.g-track {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  height: 30px;
+  border-radius: var(--radius-round);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.g-runner {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  border-radius: var(--radius-round);
+  background: var(--accent-gradient);
+  box-shadow: var(--gloss-highlight), var(--gloss-glow);
+}
+
+/* Set by the replay script per row, so each track runs its own curve. */
+.g-track.running .g-runner {
+  animation: g-run var(--g-dur) var(--g-ease) forwards;
+}
+
+@keyframes g-run {
+  to {
+    left: calc(100% - 24px);
+  }
+}
+
+/* Component bench ------------------------------------------------ */
+
+.g-bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--size-4);
+  align-items: start;
+}
+
+.g-item {
+  padding: var(--size-4);
+  border-radius: var(--radius-3);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-page);
+}
+
+.g-item-label {
+  font-family: var(--font-mono);
+  font-size: var(--size-3xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-6);
+  margin-bottom: var(--size-3);
+}
+
+/* A stand-in for the scrollable comment panel, so feed components sit on
+   the surface they actually ship on. */
+.g-panel-stage {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+  background: var(--surface-page);
+}
+
+.g-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-3);
+}
+
+/* .jump-to-current is position:absolute in the real panel; give it an
+   anchor here and force the visible state. */
+.g-floating-stage {
+  position: relative;
+  height: 82px;
+  border-radius: var(--radius-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+}
+
+.g-floating-stage .jump-to-current {
+  bottom: var(--size-3);
+}
+
+@media (max-width: 860px) {
+  .gallery {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-5);
+  }
+
+  .g-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+/* how-to.css pins .icon-back-button to the viewport corner. Inside the
+   bench it needs to sit in normal flow like every other specimen. */
+.g-item .icon-back-button,
+.g-bench .icon-back-button {
+  position: static;
+}
+
+/* home.css and how-to.css both claim .home-logo at different sizes; the
+   bench shows each at its real size explicitly. */
+.g-item .home-logo {
+  width: var(--g-logo, 56px);
+  height: var(--g-logo, 56px);
+}
+
+/* The real modal is centered by a fixed backdrop that isn't present here. */
+.g-item #modal-card {
+  margin: 0;
+  max-width: none;
+}
+
+.g-item .paste-form,
+.g-item .howto-steps,
+.g-item .howto-limitation,
+.g-item .video-grid {
+  margin-top: 0;
+}
+
+/* Font switcher (gallery.html only) ------------------------------ */
+
+.g-font-switcher {
+  position: fixed;
+  top: var(--size-4);
+  right: var(--size-4);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  padding: var(--size-2) var(--size-3);
+  border-radius: var(--radius-round);
+  background: var(--surface-card);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--gloss-highlight-soft), var(--shadow-2);
+}
+
+.g-font-switcher label {
+  font-family: var(--font-mono);
+  font-size: var(--size-3xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-5);
+  white-space: nowrap;
+}
+
+.g-font-switcher select {
+  padding: 5px var(--size-2);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  font-size: var(--size-xs);
+  cursor: pointer;
+  transition: border-color var(--motion-hover);
+}
+
+.g-font-switcher select:hover {
+  border-color: var(--accent-border);
+}
+
+.g-font-switcher select:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.g-font-switcher-hint {
+  max-width: 220px;
+  font-size: var(--size-3xs);
+  line-height: var(--leading-normal);
+  color: var(--text-6);
+}
+
+@media (max-width: 860px) {
+  .g-font-switcher {
+    position: static;
+    margin: var(--size-4) var(--size-4) 0;
+    flex-wrap: wrap;
+  }
+}

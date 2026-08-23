@@ -1,9 +1,9 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0f0f0f;
+  background: var(--surface-page);
   font-family: var(--font-ui);
-  color: #f1f1f1;
+  color: var(--text-1);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13,37 +13,43 @@ body {
 .home-logo {
   width: 56px;
   height: 56px;
-  filter: drop-shadow(0 4px 18px rgba(132, 94, 247, 0.45));
+  filter: drop-shadow(0 4px 18px rgba(var(--accent-rgb), 0.45));
 }
 
 .home-title {
   margin-top: var(--size-3);
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--size-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
   color: var(--accent-text);
-  text-shadow: 0 0 28px rgba(132, 94, 247, 0.35);
+  text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.35);
 }
 
 .home-tagline {
   margin-top: var(--size-2);
-  color: #9a9a9a;
-  font-size: 15px;
+  color: var(--text-4);
+  font-size: var(--size-md);
 }
 
 .howto-link {
   margin-top: var(--size-3);
   color: var(--accent-text);
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  font-size: var(--size-xs);
+  letter-spacing: var(--tracking-label);
   text-decoration: none;
   border-bottom: 1px solid var(--accent-border);
-  transition: border-color 0.15s var(--ease-2);
+  transition: border-color var(--motion-hover);
 }
 
 .howto-link:hover {
   border-color: var(--accent-text);
+}
+
+.howto-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-radius: var(--radius-1);
 }
 
 .paste-form {
@@ -59,63 +65,61 @@ body {
   min-width: 0;
   padding: 11px var(--size-4);
   border-radius: var(--radius-round);
-  border: 1px solid #272727;
-  background: #161616;
-  color: #f1f1f1;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sunken);
+  color: var(--text-1);
   font-family: var(--font-ui);
-  font-size: 14px;
-  transition: border-color 0.15s var(--ease-2), box-shadow 0.15s var(--ease-2);
+  font-size: var(--size-body);
+  transition: border-color var(--motion-hover), box-shadow var(--motion-hover);
 }
 
 #paste-input::placeholder {
-  color: #6b6b6b;
+  color: var(--text-6);
 }
 
-#paste-input:focus {
+#paste-input:focus-visible {
   outline: none;
   border-color: var(--accent-border);
-  box-shadow: var(--gloss-glow);
+  box-shadow: var(--gloss-glow), 0 0 0 3px var(--accent-soft);
 }
 
+/* .btn-primary (panel.css) supplies the look; only the form-flex rule and
+   the loading pulse are specific to this button. */
 #paste-button {
   flex: none;
-  padding: 11px var(--size-5);
-  border: none;
-  border-radius: var(--radius-round);
-  background: var(--accent-gradient);
-  color: #fff;
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: var(--gloss-highlight), var(--gloss-glow);
-  transition: filter 0.15s var(--ease-2), transform 0.15s var(--ease-2);
 }
 
-#paste-button:hover:not(:disabled) {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
+@keyframes paste-button-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
+/* Runs for exactly the lookup window - the button is disabled only while
+   the "?" placeholder is up, so the pulse itself is the loading signal
+   instead of a separate spinner. */
 #paste-button:disabled {
-  opacity: 0.6;
-  cursor: default;
+  animation: paste-button-pulse var(--dur-ambient) var(--ease-standard) infinite;
 }
 
 .paste-error {
   margin-top: var(--size-2);
   min-height: 18px;
-  font-size: 13px;
-  color: #f2777a;
+  font-size: var(--size-sm);
+  color: var(--danger);
 }
 
 .home-section-label {
   margin-top: var(--size-5);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: #6b6b6b;
+  color: var(--text-6);
 }
 
 .video-grid {
@@ -132,18 +136,24 @@ body {
   flex-direction: column;
   border-radius: var(--radius-3);
   overflow: hidden;
-  background: linear-gradient(180deg, #1c1c1c, #161616);
-  border: 1px solid #272727;
+  background: var(--surface-card);
+  border: 1px solid var(--line-strong);
   text-decoration: none;
   color: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  transition: border-color 0.15s var(--ease-2), transform 0.15s var(--ease-2), box-shadow 0.15s var(--ease-2);
+  box-shadow: var(--gloss-highlight-soft);
+  transition: border-color var(--motion-hover), transform var(--motion-glide), box-shadow var(--motion-hover);
 }
 
 .video-card:hover {
   border-color: var(--accent-border);
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), var(--gloss-glow);
+  transform: translateY(var(--lift-md));
+  box-shadow: var(--gloss-highlight-soft), var(--gloss-glow);
+}
+
+.video-card:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: var(--gloss-highlight-soft), var(--gloss-glow), 0 0 0 3px var(--accent-soft);
 }
 
 .video-card:hover .video-thumb img {
@@ -162,7 +172,7 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.2s var(--ease-2);
+  transition: transform var(--motion-glide);
 }
 
 /* A corner ribbon, not a subtle icon - this is the whole point of the
@@ -174,18 +184,18 @@ body {
   width: 150px;
   transform: rotate(-45deg);
   background: var(--accent-gradient);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-1);
   text-align: center;
 }
 
 .sync-badge span {
   display: block;
   padding: 4px 0;
-  color: #fff;
+  color: var(--text-on-accent);
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-ribbon);
   text-transform: uppercase;
 }
 
@@ -197,17 +207,17 @@ body {
 }
 
 .video-channel {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--accent-text);
 }
 
 .video-title {
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: var(--size-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
 }
 
 #modal-backdrop {
@@ -218,10 +228,10 @@ body {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  backdrop-filter: var(--blur-scrim);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s var(--ease-2);
+  transition: opacity var(--motion-hover);
 }
 
 #modal-backdrop.visible {
@@ -236,9 +246,9 @@ body {
   margin: var(--size-4);
   border-radius: var(--radius-3);
   overflow: hidden;
-  background: linear-gradient(180deg, #1c1c1c, #161616);
+  background: var(--surface-card);
   border: 1px solid var(--accent-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 20px 60px rgba(0, 0, 0, 0.5), var(--gloss-glow);
+  box-shadow: var(--gloss-highlight-soft), var(--shadow-4), var(--gloss-glow);
 }
 
 #modal-back {
@@ -246,12 +256,6 @@ body {
   top: var(--size-3);
   left: var(--size-3);
   z-index: 2;
-  transition: opacity 0.15s var(--ease-2);
-}
-
-#modal-back.disabled {
-  opacity: 0.35;
-  pointer-events: none;
 }
 
 #modal-thumb {
@@ -276,30 +280,30 @@ body {
   object-fit: contain;
 }
 
-#modal-start-button {
+/* .btn-primary + .btn-primary--lg (panel.css) supply the look. Centering
+   is keyed to the structural position (any primary button inside a modal
+   thumb overlays it) rather than to id="modal-start-button" specifically,
+   so the same markup works unmodified wherever a start button sits over a
+   thumbnail - including the gallery's standalone specimen. */
+#modal-thumb .btn-primary {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 12px 24px;
-  border: none;
-  border-radius: var(--radius-round);
-  background: var(--accent-gradient);
-  color: #fff;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: var(--gloss-highlight), 0 6px 20px rgba(0, 0, 0, 0.45), var(--gloss-glow-strong);
-  transition: filter 0.15s var(--ease-2), transform 0.15s var(--ease-2);
+  box-shadow: var(--gloss-highlight), var(--shadow-2), var(--gloss-glow-strong);
 }
 
-#modal-start-button:hover {
-  filter: brightness(1.08);
-  transform: translate(-50%, -50%) translateY(-1px);
+#modal-thumb .btn-primary:hover:not(:disabled) {
+  transform: translate(-50%, -50%) translateY(var(--lift-sm));
 }
 
-#modal-start-button:disabled {
+#modal-thumb .btn-primary:active:not(:disabled) {
+  transform: translate(-50%, -50%) scale(0.97);
+}
+
+/* Hidden entirely rather than dimmed while the modal-loading overlay is
+   up - a dimmed-but-present button would suggest it's still clickable. */
+#modal-thumb .btn-primary:disabled {
   opacity: 0;
   pointer-events: none;
 }
@@ -314,8 +318,8 @@ body {
   gap: var(--size-3);
   background: rgba(0, 0, 0, 0.55);
   font-family: var(--font-mono);
-  font-size: 13px;
-  color: #ede9fe;
+  font-size: var(--size-sm);
+  color: var(--accent-tint);
 }
 
 #modal-info {
@@ -323,16 +327,16 @@ body {
 }
 
 #modal-channel {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--accent-text);
 }
 
 #modal-title {
   margin-top: var(--size-1);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: var(--size-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
 }

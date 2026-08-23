@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Sidecast Design Spec</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+  />
+  <!-- Candidate pairings for the font switcher below. Gallery-only - none
+       of these load on the real app pages until tokens.css is changed. -->
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+  />
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" />
+  <link rel="stylesheet" href="https://unpkg.com/open-props" />
+  <link rel="stylesheet" href="gallery.css" />
+</head>
+<body>
+<div class="g-font-switcher">
+  <label for="g-font-select">Font pairing</label>
+  <select id="g-font-select"></select>
+  <span class="g-font-switcher-hint" id="g-font-switcher-hint"></span>
+</div>
+<div class="gallery">
+  <nav class="g-nav">
+    <div class="g-nav-title">Sidecast</div>
+    <div class="g-nav-sub">design spec<br />tokens.css</div>
+    <a href="#color">Color</a>
+    <a href="#type">Type</a>
+    <a href="#elevation">Elevation</a>
+    <a href="#motion">Motion</a>
+    <a href="#components">Components</a>
+    <a href="index.html">&larr; back to app</a>
+  </nav>
+
+  <main>
+    <section class="g-section">
+      <div class="g-section-title">Design spec</div>
+      <p class="g-section-note">
+        Every value on this page is read live from <code>tokens.css</code> at load
+        time, not copied into the markup. If a token changes there, this page
+        changes with it, and if a token is deleted its row here goes blank. That
+        is deliberate: a spec sheet that restates values eventually lies about
+        them.
+      </p>
+      <p class="g-section-note">
+        Components below are rendered with the real stylesheets
+        (<code>panel.css</code>, <code>home.css</code>, <code>how-to.css</code>),
+        so what you see is what ships.
+      </p>
+    </section>
+
+    <!-- Color ---------------------------------------------------- -->
+    <section class="g-section" id="color">
+      <div class="g-section-title">Color</div>
+      <p class="g-section-note">
+        One violet accent against a dark neutral ramp deliberately close to
+        YouTube's, so the app reads as something sitting beside a player rather
+        than a separate site. Accent carries weight and state; it is never
+        decoration.
+      </p>
+
+      <div class="g-sub">Accent</div>
+      <div class="g-swatches" data-swatches="accent"></div>
+
+      <div class="g-sub">Surfaces</div>
+      <div class="g-swatches" data-swatches="surface"></div>
+
+      <div class="g-sub">Lines</div>
+      <div class="g-swatches" data-swatches="line"></div>
+
+      <div class="g-sub">Text</div>
+      <div class="g-swatches" data-swatches="text"></div>
+    </section>
+
+    <!-- Type ----------------------------------------------------- -->
+    <section class="g-section" id="type">
+      <div class="g-section-title">Type</div>
+      <p class="g-section-note">
+        Roboto for everything readable, Roboto Mono for anything that behaves
+        like an instrument reading: labels, timestamps, counts, hints. The mono
+        label convention is uppercase at
+        <code>--tracking-label</code>, and it is the single strongest signal in
+        the interface, so it should stay rare.
+      </p>
+
+      <div class="g-sub">Scale</div>
+      <div data-specimens="scale"></div>
+
+      <div class="g-sub">Weight</div>
+      <div data-specimens="weight"></div>
+
+      <div class="g-sub">Line height</div>
+      <div data-specimens="leading"></div>
+
+      <div class="g-sub">Label convention</div>
+      <div class="g-bench">
+        <div class="g-item">
+          <div class="g-item-label">panel label</div>
+          <div class="panel-label" style="border-bottom: none; padding: 0">Streamed Chat</div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">section label</div>
+          <div class="home-section-label">or pick one</div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">channel label</div>
+          <div class="video-channel">Veritasium</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Elevation ------------------------------------------------ -->
+    <section class="g-section" id="elevation">
+      <div class="g-section-title">Elevation</div>
+      <p class="g-section-note">
+        Height is expressed two ways at once: a shadow underneath, and a
+        one-pixel highlight along the top edge where light would catch a glossy
+        surface. The highlight is never used alone. On its own it reads as a
+        flat element with a stray line on it.
+      </p>
+
+      <div class="g-sub">Shadow</div>
+      <div class="g-bench" data-elevation="shadow"></div>
+
+      <div class="g-sub">Gloss</div>
+      <div class="g-bench" data-elevation="gloss"></div>
+    </section>
+
+    <!-- Motion --------------------------------------------------- -->
+    <section class="g-section" id="motion">
+      <div class="g-section-title">Motion</div>
+      <p class="g-section-note">
+        The part that decides whether this feels fluid or mechanical. Two rules.
+        First, match the curve to the distance: something moving a pixel on hover
+        wants <code>--ease-standard</code>, something crossing the panel wants
+        <code>--ease-glide</code>, which decelerates through most of its travel
+        and settles rather than stopping. Second, spend the budget unevenly. Most
+        transitions should be quiet and quick, with the long curves and
+        <code>--ease-spring</code> reserved for the few moments that carry
+        meaning. Uniform motion is why the current pages feel flat: everything
+        moves the same amount at the same speed, so nothing stands out.
+      </p>
+
+      <div class="g-sub">Curves</div>
+      <div class="g-motion-controls">
+        <button class="g-replay" type="button" data-replay="ease">Replay</button>
+        <span class="g-motion-hint">All four run at <code>--dur-slow</code> so only the curve differs.</span>
+      </div>
+      <div data-tracks="ease"></div>
+
+      <div class="g-sub">Durations</div>
+      <div class="g-motion-controls">
+        <button class="g-replay" type="button" data-replay="dur">Replay</button>
+        <span class="g-motion-hint">All five run on <code>--ease-standard</code> so only the duration differs.</span>
+      </div>
+      <div data-tracks="dur"></div>
+
+      <div class="g-sub">Shorthands</div>
+      <p class="g-section-note">
+        Compose transitions from these rather than restating a duration and curve
+        pair. <code>transition: transform var(--motion-hover)</code>, not
+        <code>transition: transform 160ms cubic-bezier(...)</code>.
+      </p>
+      <div data-specimens="shorthand"></div>
+
+      <div class="g-sub">Lift</div>
+      <p class="g-section-note">
+        Named hover displacement, so no component invents its own nudge distance.
+        Hover each square.
+      </p>
+      <div class="g-bench" data-lift="1"></div>
+    </section>
+
+    <!-- Components ----------------------------------------------- -->
+    <section class="g-section" id="components">
+      <div class="g-section-title">Components</div>
+      <p class="g-section-note">
+        Live components pulled from the shipping stylesheets. Anything that looks
+        wrong here is wrong in the app.
+      </p>
+
+      <div class="g-sub">Buttons and inputs</div>
+      <div class="g-bench">
+        <div class="g-item">
+          <div class="g-item-label">primary / paste form</div>
+          <form class="paste-form" onsubmit="return false">
+            <input type="text" id="paste-input" placeholder="Paste a YouTube link or video ID" spellcheck="false" />
+            <button type="submit" id="paste-button" class="btn-primary">Go</button>
+          </form>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">primary / feed start</div>
+          <button id="start-feed-button" class="btn-primary" type="button">Watch with Sidecast</button>
+          <div id="start-feed-hint" style="margin-top: var(--size-3)">Loads synced comments and fact cards for this video.</div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">primary / overlay</div>
+          <div style="display: flex; align-items: center; justify-content: center; height: 60px">
+            <button class="btn-primary btn-primary--lg" type="button">Start Sidecast</button>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">icon button</div>
+          <div class="g-row">
+            <a class="icon-back-button" href="#components" aria-label="Back">&larr;</a>
+            <a class="icon-back-button disabled" href="#components" aria-label="Back, disabled">&larr;</a>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">toggle</div>
+          <div class="g-row">
+            <button class="fact-timeline-toggle" type="button">
+              Fact Timeline <span class="fact-timeline-count">5</span>
+            </button>
+            <button class="fact-timeline-toggle active" type="button">
+              Fact Timeline <span class="fact-timeline-count">5</span>
+            </button>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">error text</div>
+          <div class="paste-error">That doesn't look like a YouTube link or video ID.</div>
+        </div>
+      </div>
+
+      <div class="g-sub">Badges</div>
+      <div class="g-bench">
+        <div class="g-item">
+          <div class="g-item-label">sync ribbon (on thumbnail)</div>
+          <div class="video-thumb" style="border-radius: var(--radius-3)">
+            <img data-thumb="uxPdPpi5W4o" alt="" />
+            <div class="sync-badge"><span>Synced</span></div>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">inline badge</div>
+          <div style="font-size: var(--size-sm); color: var(--text-3); line-height: var(--leading-loose)">
+            Works reliably for our <span class="howto-badge">Synced</span> picks.
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">insight label</div>
+          <div class="insight-label" data-icon="spark">Fact</div>
+        </div>
+      </div>
+
+      <div class="g-sub">Cards</div>
+      <div class="g-bench">
+        <div class="g-item">
+          <div class="g-item-label">video card</div>
+          <a class="video-card" href="#components">
+            <div class="video-thumb">
+              <img data-thumb="mc9WVVAUQGE" alt="" />
+              <div class="sync-badge"><span>Synced</span></div>
+            </div>
+            <div class="video-info">
+              <div class="video-channel">Hot Ones</div>
+              <div class="video-title">Tom Holland and Jon Bernthal Team Up While Eating Spicy Wings</div>
+            </div>
+          </a>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">start popup</div>
+          <div id="modal-card">
+            <a id="modal-back" class="icon-back-button" href="#components" aria-label="Close">&larr;</a>
+            <div id="modal-thumb">
+              <img id="modal-thumb-img" data-thumb="uxPdPpi5W4o" alt="" />
+              <button class="btn-primary btn-primary--lg" type="button">Start Sidecast</button>
+            </div>
+            <div id="modal-info">
+              <div id="modal-channel">Veritasium</div>
+              <div id="modal-title">Why Are 96,000,000 Black Balls on This Reservoir?</div>
+            </div>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">note card</div>
+          <div class="howto-limitation" style="margin-top: 0">
+            <div class="howto-limitation-label">Good to know</div>
+            <p>The comment feed is mechanically filtered before it ever reaches you, with no AI judging what counts as good.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="g-sub">Feed</div>
+      <p class="g-section-note">
+        These sit inside the scrolling panel, which runs a continuous
+        <code>requestAnimationFrame</code> glide synced to playback. Changing
+        their height changes that sync, so treat height as load-bearing here.
+      </p>
+      <div class="g-panel-stage">
+        <div class="summary-card">
+          <div class="summary-label">Summary</div>
+          <div class="summary-text">A reservoir in Los Angeles was covered with millions of plastic balls, and the reason has less to do with evaporation than most people assume.</div>
+        </div>
+        <div class="comment-feed">
+          <div class="comment">
+            <img class="avatar" data-avatar="1" alt="" />
+            <div class="comment-body">
+              <div class="comment-header">
+                <span class="author">mgarrison</span>
+                <span class="posted-at">2 days ago</span>
+              </div>
+              <div class="comment-text">Never thought I'd care this much about a reservoir.</div>
+              <div class="likes" data-icon="like">1.2K</div>
+            </div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-label" data-icon="spark">Fact</div>
+            <div class="insight-headline">The balls block sunlight, not evaporation</div>
+            <div class="insight-video-reference">"...so we started looking at what sunlight was actually doing to the water."</div>
+            <div class="insight-text">Sunlight reacts with bromide and chlorine in the water to form bromate, a regulated carcinogen. Shade cover was the cheapest way to stop the reaction.</div>
+            <a class="insight-source" href="#components" data-icon="link">source</a>
+          </div>
+          <div class="comment">
+            <img class="avatar" data-avatar="2" alt="" />
+            <div class="comment-body">
+              <div class="comment-header">
+                <span class="author">quietfrequency</span>
+                <span class="posted-at">6 hours ago</span>
+              </div>
+              <div class="comment-text">The bromate explanation is the part nobody mentions when this gets reposted.</div>
+              <div class="likes" data-icon="like">408</div>
+            </div>
+          </div>
+        </div>
+        <div class="loading">Loading comments…</div>
+      </div>
+
+      <div class="g-sub">Overlays</div>
+      <div class="g-bench">
+        <div class="g-item">
+          <div class="g-item-label">fact timeline row</div>
+          <button class="fact-timeline-item" type="button">
+            <span class="fact-timeline-item-icon" data-icon="spark"></span>
+            <span class="fact-timeline-item-headline">The balls block sunlight, not evaporation</span>
+            <span class="fact-timeline-item-time">4:12</span>
+          </button>
+          <div class="fact-timeline-divider">Not timestamped</div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">jump-to-current pill</div>
+          <div class="g-floating-stage">
+            <button class="jump-to-current visible" type="button" data-icon="down">Jump back</button>
+          </div>
+        </div>
+        <div class="g-item">
+          <div class="g-item-label">loading state</div>
+          <div class="modal-loading" style="position: static; padding: var(--size-5) 0; background: none">
+            <img class="loading-spinner" src="favicon.svg" alt="" />
+            <div>Setting up Sidecast…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+  const root = document.documentElement;
+
+  // Read the token's resolved value rather than a copy kept in this file.
+  // A missing or renamed token comes back empty and shows as such.
+  const token = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  /* Color ---------------------------------------------------------- */
+
+  const SWATCHES = {
+    accent: [
+      ["--accent", "Fills, borders, the rule on an insight card. Carries weight."],
+      ["--accent-text", "The only accent value legible enough for type."],
+      ["--accent-tint", "Body copy set on an accent surface."],
+      ["--accent-soft", "Hover wash on rows and toggles."],
+      ["--accent-border", "Accent hairlines and pill fills."],
+      ["--accent-gradient", "Every primary button and icon chip."],
+      ["--danger", "Form errors only."],
+    ],
+    surface: [
+      ["--surface-page", "The page and the app shell."],
+      ["--surface-sunken", "Inputs, and the low end of a card gradient."],
+      ["--surface-raised", "The high end of a card gradient."],
+      ["--surface-card", "Every raised card. Use the token, not the two stops."],
+    ],
+    line: [
+      ["--line-strong", "Separates regions: headers, panels, card edges."],
+      ["--line-soft", "Separates repeated rows inside one region."],
+      ["--line-control", "Interactive chrome that must be findable, like the resize divider."],
+    ],
+    text: [
+      ["--text-1", "Headings and author names."],
+      ["--text-2", "Body copy."],
+      ["--text-3", "Secondary body copy."],
+      ["--text-4", "Muted supporting text."],
+      ["--text-5", "Metadata: timestamps, like counts."],
+      ["--text-6", "Placeholders and disabled text."],
+      ["--text-on-accent", "Type on an accent fill."],
+    ],
+  };
+
+  for (const [group, entries] of Object.entries(SWATCHES)) {
+    const host = document.querySelector(`[data-swatches="${group}"]`);
+    for (const [name, use] of entries) {
+      const value = token(name);
+      const card = el("div", "g-swatch");
+      const chip = el("div", "g-swatch-chip");
+      const fill = el("div", "g-swatch-chip-fill");
+      // Gradients are backgrounds, flat colors work as either; setting
+      // background covers both without branching on the value's shape.
+      fill.style.background = value;
+      chip.appendChild(fill);
+      const meta = el("div", "g-swatch-meta");
+      meta.append(
+        el("div", "g-swatch-name", name),
+        el("div", "g-swatch-value", value || "not defined"),
+        el("div", "g-swatch-use", use),
+      );
+      card.append(chip, meta);
+      host.appendChild(card);
+    }
+  }
+
+  /* Type ----------------------------------------------------------- */
+
+  const SPECIMENS = {
+    scale: [
+      ["--size-display", "Sidecast", { fontWeight: 700, letterSpacing: "var(--tracking-display)" }],
+      ["--size-title", "How Sidecast Works", { fontWeight: 700, letterSpacing: "var(--tracking-display)" }],
+      ["--size-lg", "Section heading"],
+      ["--size-md", "Video and card titles", { fontWeight: 500 }],
+      ["--size-body", "Interface body copy"],
+      ["--size-sm", "Comment and insight text"],
+      ["--size-xs", "Hints and timeline headlines"],
+      ["--size-2xs", "Uppercase mono labels"],
+      ["--size-3xs", "Badges and the smallest labels"],
+    ],
+    weight: [
+      ["--weight-regular", "Regular, for running text"],
+      ["--weight-medium", "Medium, for titles and controls"],
+      ["--weight-bold", "Bold, for page titles and insight headlines"],
+    ],
+    leading: [
+      ["--leading-tight", "Insight headlines, where two lines should read as one unit."],
+      ["--leading-normal", "Comment text and short hints."],
+      ["--leading-relaxed", "Step copy on the how-it-works page."],
+      ["--leading-loose", "Long explanatory paragraphs."],
+    ],
+    shorthand: [
+      ["--motion-hover", "Hover and focus feedback. The default."],
+      ["--motion-enter", "Something appearing: a dropdown, a card."],
+      ["--motion-exit", "Something leaving. Accelerates away."],
+      ["--motion-glide", "Long travel across the panel. Settles."],
+      ["--motion-spring", "Overshoots slightly. Use sparingly."],
+    ],
+  };
+
+  for (const [group, entries] of Object.entries(SPECIMENS)) {
+    const host = document.querySelector(`[data-specimens="${group}"]`);
+    for (const [name, sample, style] of entries) {
+      const row = el("div", "g-specimen");
+      const value = token(name);
+      row.appendChild(el("div", "g-specimen-tag", `${name}  ${value}`));
+      const body = el("div", "g-specimen-body", sample);
+      if (group === "scale") body.style.fontSize = `var(${name})`;
+      if (group === "weight") body.style.fontWeight = `var(${name})`;
+      if (group === "leading") {
+        body.style.lineHeight = `var(${name})`;
+        body.style.fontSize = "var(--size-sm)";
+        body.style.maxWidth = "46ch";
+      }
+      if (group === "shorthand") {
+        body.style.fontSize = "var(--size-sm)";
+        body.style.color = "var(--text-4)";
+      }
+      Object.assign(body.style, style || {});
+      row.appendChild(body);
+      host.appendChild(row);
+    }
+  }
+
+  /* Elevation ------------------------------------------------------ */
+
+  const ELEVATION = {
+    shadow: [
+      ["--shadow-1", "A badge lifted off a thumbnail."],
+      ["--shadow-2", "A floating pill over the feed."],
+      ["--shadow-3", "A dropdown over content."],
+      ["--shadow-4", "A modal over the page."],
+    ],
+    gloss: [
+      ["--gloss-highlight", "Top-edge light on a button or chip."],
+      ["--gloss-highlight-soft", "The same, on a large card where full strength is too much."],
+      ["--gloss-glow", "Accent glow at rest."],
+      ["--gloss-glow-strong", "Accent glow on hover."],
+    ],
+  };
+
+  for (const [group, entries] of Object.entries(ELEVATION)) {
+    const host = document.querySelector(`[data-elevation="${group}"]`);
+    for (const [name, use] of entries) {
+      const item = el("div", "g-item");
+      item.appendChild(el("div", "g-item-label", name));
+      const sample = el("div");
+      Object.assign(sample.style, {
+        height: "56px",
+        borderRadius: "var(--radius-3)",
+        background: "var(--surface-card)",
+        border: "1px solid var(--line-strong)",
+        boxShadow: `var(${name})`,
+        marginBottom: "var(--size-3)",
+      });
+      item.append(sample, el("div", "g-swatch-use", use), el("div", "g-swatch-value", token(name)));
+      host.appendChild(item);
+    }
+  }
+
+  /* Motion --------------------------------------------------------- */
+
+  const TRACKS = {
+    ease: [
+      ["--ease-standard", "The everyday in-out. Short distances."],
+      ["--ease-entrance", "Things arriving on screen."],
+      ["--ease-glide", "Long travel. Decelerates and settles."],
+      ["--ease-spring", "Overshoots, then returns. Rare by design."],
+    ],
+    dur: [
+      ["--dur-instant", "A color flip on a small control."],
+      ["--dur-fast", "Standard hover feedback."],
+      ["--dur-normal", "An element appearing or expanding."],
+      ["--dur-slow", "A sheet crossing real distance."],
+      ["--dur-ambient", "Looping texture: shimmer, pulse."],
+    ],
+  };
+
+  for (const [group, entries] of Object.entries(TRACKS)) {
+    const host = document.querySelector(`[data-tracks="${group}"]`);
+    for (const [name, use] of entries) {
+      const row = el("div", "g-track-row");
+      const label = el("div", "g-track-label");
+      label.append(el("div", "g-track-name", name), el("div", "g-track-use", use));
+      const track = el("div", "g-track");
+      // Hold one variable constant per group so the row isolates the other.
+      track.style.setProperty("--g-ease", group === "ease" ? `var(${name})` : "var(--ease-standard)");
+      track.style.setProperty("--g-dur", group === "dur" ? `var(${name})` : "var(--dur-slow)");
+      track.appendChild(el("div", "g-runner"));
+      row.append(label, track);
+      host.appendChild(row);
+    }
+  }
+
+  function replay(group) {
+    const tracks = document.querySelectorAll(`[data-tracks="${group}"] .g-track`);
+    for (const track of tracks) {
+      track.classList.remove("running");
+      // Reading offsetWidth forces the removal to take effect before the
+      // class goes back on, otherwise the browser coalesces both changes
+      // into no change at all and the animation never restarts.
+      void track.offsetWidth;
+      track.classList.add("running");
+    }
+  }
+
+  for (const button of document.querySelectorAll("[data-replay]")) {
+    button.addEventListener("click", () => replay(button.dataset.replay));
+  }
+
+  // Run each group once when it first scrolls into view, so the curves are
+  // already moving by the time you read the labels.
+  const seen = new Set();
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const group = entry.target.dataset.tracks;
+        if (entry.isIntersecting && !seen.has(group)) {
+          seen.add(group);
+          replay(group);
+        }
+      }
+    },
+    { threshold: 0.4 },
+  );
+  for (const host of document.querySelectorAll("[data-tracks]")) observer.observe(host);
+
+  /* Lift ----------------------------------------------------------- */
+
+  const host = document.querySelector("[data-lift]");
+  for (const [name, use] of [
+    ["--lift-sm", "Buttons and pills. Barely perceptible, which is the point."],
+    ["--lift-md", "Cards, where the surface is large enough to carry more."],
+  ]) {
+    const item = el("div", "g-item");
+    item.appendChild(el("div", "g-item-label", `${name}  ${token(name)}`));
+    const sample = el("div");
+    Object.assign(sample.style, {
+      height: "56px",
+      borderRadius: "var(--radius-3)",
+      background: "var(--surface-card)",
+      border: "1px solid var(--line-strong)",
+      boxShadow: "var(--gloss-highlight-soft)",
+      marginBottom: "var(--size-3)",
+      transition: "transform var(--motion-hover), box-shadow var(--motion-hover)",
+    });
+    sample.addEventListener("pointerenter", () => {
+      sample.style.transform = `translateY(var(${name}))`;
+      sample.style.boxShadow = "var(--gloss-highlight-soft), var(--gloss-glow)";
+    });
+    sample.addEventListener("pointerleave", () => {
+      sample.style.transform = "translateY(0)";
+      sample.style.boxShadow = "var(--gloss-highlight-soft)";
+    });
+    item.append(sample, el("div", "g-swatch-use", use));
+    host.appendChild(item);
+  }
+
+  /* Component fixtures --------------------------------------------- */
+
+  for (const img of document.querySelectorAll("[data-thumb]")) {
+    img.src = `https://img.youtube.com/vi/${img.dataset.thumb}/hqdefault.jpg`;
+  }
+
+  // Inline so the gallery renders without network access for avatars.
+  for (const img of document.querySelectorAll("[data-avatar]")) {
+    const hue = img.dataset.avatar === "1" ? 258 : 190;
+    img.src =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="hsl(${hue} 40% 28%)"/><circle cx="16" cy="13" r="5.5" fill="hsl(${hue} 45% 62%)"/><path d="M4 32c0-7 5.4-11 12-11s12 4 12 11z" fill="hsl(${hue} 45% 62%)"/></svg>`,
+      );
+  }
+
+  // The real components get these icons from panel.js; the gallery only
+  // needs them to look right, so it inlines the same shapes.
+  const ICONS = {
+    spark: '<path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/>',
+    link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  };
+
+  for (const node of document.querySelectorAll("[data-icon]")) {
+    const svg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[node.dataset.icon]}</svg>`;
+    node.insertAdjacentHTML("afterbegin", svg);
+  }
+
+  /* Font switcher --------------------------------------------------
+   *
+   * Overrides --font-ui / --font-mono on :root at runtime, on top of
+   * whatever tokens.css set. Gallery-only preview: nothing here writes
+   * back to tokens.css, so switching a pairing never touches the shipped
+   * app. Selection persists in localStorage so it survives a reload while
+   * you're comparing. */
+
+  const FONT_PRESETS = [
+    {
+      id: "default",
+      label: "Current — Manrope / IBM Plex Mono",
+      ui: '"Manrope", -apple-system, BlinkMacSystemFont, sans-serif',
+      mono: '"IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace',
+    },
+    {
+      id: "inter-jetbrains",
+      label: "Inter / JetBrains Mono",
+      ui: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+      mono: '"JetBrains Mono", ui-monospace, "SFMono-Regular", monospace',
+    },
+    {
+      id: "general-space",
+      label: "General Sans / Space Mono",
+      ui: '"General Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+      mono: '"Space Mono", ui-monospace, "SFMono-Regular", monospace',
+    },
+    {
+      id: "grotesk-space",
+      label: "Space Grotesk / Space Mono",
+      ui: '"Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif',
+      mono: '"Space Mono", ui-monospace, "SFMono-Regular", monospace',
+    },
+    {
+      id: "roboto-previous",
+      label: "Roboto / Roboto Mono (previous)",
+      ui: '"Roboto", -apple-system, BlinkMacSystemFont, sans-serif',
+      mono: '"Roboto Mono", ui-monospace, "SFMono-Regular", monospace',
+    },
+  ];
+
+  const STORAGE_KEY = "sidecast-gallery-font-preset";
+  const fontSelect = document.getElementById("g-font-select");
+  const fontHint = document.getElementById("g-font-switcher-hint");
+
+  for (const preset of FONT_PRESETS) {
+    const opt = document.createElement("option");
+    opt.value = preset.id;
+    opt.textContent = preset.label;
+    fontSelect.appendChild(opt);
+  }
+
+  function applyFontPreset(id) {
+    const preset = FONT_PRESETS.find((p) => p.id === id) || FONT_PRESETS[0];
+    root.style.setProperty("--font-ui", preset.ui);
+    root.style.setProperty("--font-mono", preset.mono);
+    fontSelect.value = preset.id;
+    fontHint.textContent =
+      preset.id === "default"
+        ? "This is what's currently shipping."
+        : `To make this real: set --font-ui and --font-mono in tokens.css to these values.`;
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      // Preview-only convenience; a private window or blocked storage
+      // just means the choice doesn't survive a reload, nothing breaks.
+    }
+  }
+
+  fontSelect.addEventListener("change", () => applyFontPreset(fontSelect.value));
+
+  let saved = "default";
+  try {
+    saved = localStorage.getItem(STORAGE_KEY) || "default";
+  } catch {
+    // Same as above - fall back to the default preset.
+  }
+  applyFontPreset(saved);
+</script>
+</body>
+</html>
