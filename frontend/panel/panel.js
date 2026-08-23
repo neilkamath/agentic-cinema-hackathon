@@ -305,7 +305,7 @@ export function mountPanel(
     toggle.type = "button";
     toggle.className = "fact-timeline-toggle";
     toggle.innerHTML = `
-      <span class="fact-timeline-count">${timestampedInsights.length || untimestampedInsights.length}</span>
+      <span class="fact-timeline-count">${timestampedInsights.length + untimestampedInsights.length}</span>
       <span>Fact Timeline</span>
       ${ICONS.arrowDown}
     `;
@@ -319,15 +319,38 @@ export function mountPanel(
       toggle.classList.remove("active");
     }
 
-    for (const insight of timestampedInsights) {
+    // `headline` is written by the model from the video's own description,
+    // transcript, and search results, so it can contain an ampersand or an
+    // angle bracket like any other prose. It goes in as textContent, the same
+    // as the insight card does with the identical string - interpolating it
+    // into markup renders "Fish & Chips <b>x</b>" as parsed HTML in the
+    // timeline while the card shows the words the model actually wrote.
+    function renderTimelineItem(insight, { withTime }) {
       const item = document.createElement("button");
       item.type = "button";
       item.className = "fact-timeline-item";
-      item.innerHTML = `
-        <span class="fact-timeline-item-icon">${ICONS[insight.category] || ICONS.did_you_know}</span>
-        <span class="fact-timeline-item-headline">${insight.headline}</span>
-        <span class="fact-timeline-item-time">${formatTimestamp(insight.timestamp_seconds)}</span>
-      `;
+
+      const icon = document.createElement("span");
+      icon.className = "fact-timeline-item-icon";
+      icon.innerHTML = ICONS[insight.category] || ICONS.did_you_know;
+      item.appendChild(icon);
+
+      const headline = document.createElement("span");
+      headline.className = "fact-timeline-item-headline";
+      headline.textContent = insight.headline;
+      item.appendChild(headline);
+
+      if (withTime) {
+        const time = document.createElement("span");
+        time.className = "fact-timeline-item-time";
+        time.textContent = formatTimestamp(insight.timestamp_seconds);
+        item.appendChild(time);
+      }
+      return item;
+    }
+
+    for (const insight of timestampedInsights) {
+      const item = renderTimelineItem(insight, { withTime: true });
       item.addEventListener("click", () => {
         seekTo?.(insight.timestamp_seconds);
 
@@ -367,13 +390,7 @@ export function mountPanel(
       timelineList.appendChild(divider);
 
       for (const insight of untimestampedInsights) {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "fact-timeline-item";
-        item.innerHTML = `
-          <span class="fact-timeline-item-icon">${ICONS[insight.category] || ICONS.did_you_know}</span>
-          <span class="fact-timeline-item-headline">${insight.headline}</span>
-        `;
+        const item = renderTimelineItem(insight, { withTime: false });
         item.addEventListener("click", () => {
           // No seekTo, no pendingSeek pin - there's no real video moment to
           // hold the feed at, so this just scrolls to wherever this card's
@@ -636,13 +653,15 @@ export function mountPanel(
   // roughly the current video moment - they just appeared, same as a live
   // chat message would - and inserted into the sorted sequence rather than
   // just appended, since "now" can land before already-rendered items that
-  // were interpolated further ahead.
-  function insertComment(comment, currentTime) {
+  // were interpolated further ahead. `placeAt` is that moment; the caller
+  // staggers it across a batch (see poll) so several comments arriving
+  // together don't all land on one identical timestamp.
+  function insertComment(comment, placeAt) {
     if (renderedNodes.has(comment.id)) return;
     const hasTimestamp = comment.timestamp_seconds != null;
     const effectiveTimestamp = hasTimestamp
       ? Math.min(comment.timestamp_seconds, state.mergedDuration)
-      : currentTime;
+      : Math.min(placeAt, state.mergedDuration);
     const item = { type: "comment", id: comment.id, data: comment, effectiveTimestamp, interpolated: !hasTimestamp };
 
     let idx = state.sequence.findIndex((s) => s.effectiveTimestamp > effectiveTimestamp);
@@ -748,10 +767,28 @@ export function mountPanel(
       });
       const data = await res.json();
       const playback = getPlaybackState ? getPlaybackState() : null;
+
+      // Everything in one poll batch did arrive at the same moment, but
+      // placing them all at exactly `currentTime` gives them one identical
+      // timestamp. `contentTargetFor` then anchors to the last of the run
+      // (a zero-length span between them interpolates to nothing), so the
+      // target leaps the full height of the batch at once and the feed
+      // sweeps past every one of them at its speed cap - the batch scrolls
+      // by unread. Spreading them across the wait until the next poll
+      // reveals them one at a time, which is what a live chat looks like.
+      const undatedCount = data.comments.filter((c) => c.timestamp_seconds == null).length;
+      const spacingSec = undatedCount > 1 ? POLL_INTERVAL_MS / 1000 / undatedCount : 0;
+      let undatedIndex = 0;
       for (const comment of data.comments) {
         state.comments.push(comment);
         if (state.merged && playback && playback.duration) {
-          insertComment(comment, playback.currentTime);
+          // Comments that name their own timestamp keep it; only the ones
+          // being placed at "now" need staggering.
+          const placeAt =
+            comment.timestamp_seconds == null
+              ? playback.currentTime + undatedIndex++ * spacingSec
+              : playback.currentTime;
+          insertComment(comment, placeAt);
         }
       }
       if (data.cursor) {
