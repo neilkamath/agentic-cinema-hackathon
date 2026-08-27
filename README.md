@@ -24,7 +24,7 @@ https://sidecast.web.app
 - YouTube Data API v3 - comments and video metadata
 - `youtube-transcript-api` - transcript fetching
 - FastAPI backend on Google Cloud Run
-- Vanilla JS/HTML/CSS frontend (no build step) on Firebase Hosting
+- Vanilla JS/HTML/CSS frontend (no build step) on Firebase Hosting, with [Motion](https://motion.dev) (via CDN import) for entrance/interaction animations
 
 ## Run locally
 
