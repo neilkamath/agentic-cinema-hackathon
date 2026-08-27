@@ -61,6 +61,7 @@ async def get_video(video_id: str):
         "video_id": video_id,
         "title": metadata["title"],
         "channel_title": metadata["channel_title"],
+        "live_broadcast_content": metadata["live_broadcast_content"],
     }
 
 

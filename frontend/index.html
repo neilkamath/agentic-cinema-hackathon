@@ -154,11 +154,15 @@
     });
 
     // Accepts the shapes people actually paste: a full watch URL, a share
-    // link, a /shorts/ or /embed/ URL, or the bare 11-character ID.
-    function parseVideoId(raw) {
+    // link, an /embed/ or /v/ URL, or the bare 11-character ID. Shorts and
+    // live links parse fine but aren't a supported player mode here (no
+    // fixed-length transcript to sync insights against), so they're
+    // reported back as their own `kind` instead of a plain ID - the caller
+    // decides how to message each case.
+    function parseVideoLink(raw) {
       const input = raw.trim();
       if (!input) return null;
-      if (/^[\w-]{11}$/.test(input)) return input;
+      if (/^[\w-]{11}$/.test(input)) return { id: input, kind: "video" };
 
       let url;
       try {
@@ -170,18 +174,29 @@
       const host = url.hostname.replace(/^www\./, "");
       if (host === "youtu.be") {
         const id = url.pathname.slice(1).split("/")[0];
-        return /^[\w-]{11}$/.test(id) ? id : null;
+        return /^[\w-]{11}$/.test(id) ? { id, kind: "video" } : null;
       }
       if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "music.youtube.com") {
         return null;
       }
 
-      const v = url.searchParams.get("v");
-      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const shortsMatch = url.pathname.match(/^\/shorts\/([\w-]{11})/);
+      if (shortsMatch) return { id: shortsMatch[1], kind: "shorts" };
 
-      const match = url.pathname.match(/^\/(?:shorts|embed|live|v)\/([\w-]{11})/);
-      return match ? match[1] : null;
+      const liveMatch = url.pathname.match(/^\/live\/([\w-]{11})/);
+      if (liveMatch) return { id: liveMatch[1], kind: "live" };
+
+      const v = url.searchParams.get("v");
+      if (v && /^[\w-]{11}$/.test(v)) return { id: v, kind: "video" };
+
+      const match = url.pathname.match(/^\/(?:embed|v)\/([\w-]{11})/);
+      return match ? { id: match[1], kind: "video" } : null;
     }
+
+    const UNSUPPORTED_LINK_MESSAGES = {
+      shorts: "Shorts aren't supported here - paste a regular video link.",
+      live: "Live videos aren't supported here - paste a regular video link.",
+    };
 
     const pasteForm = document.getElementById("paste-form");
     const pasteInput = document.getElementById("paste-input");
@@ -194,23 +209,34 @@
 
     pasteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const videoId = parseVideoId(pasteInput.value);
-      if (!videoId) {
+      const parsed = parseVideoLink(pasteInput.value);
+      if (!parsed) {
         pasteError.textContent = "That doesn't look like a YouTube link or video ID.";
         return;
       }
+      if (parsed.kind in UNSUPPORTED_LINK_MESSAGES) {
+        pasteError.textContent = UNSUPPORTED_LINK_MESSAGES[parsed.kind];
+        return;
+      }
+      const videoId = parsed.id;
 
       pasteError.textContent = "";
       pasteButton.disabled = true;
       pasteButton.textContent = "…";
 
-      // Look the video up before opening the modal so a typo'd-but-valid ID
-      // fails here with a message, instead of opening a modal that then
-      // breaks on the expensive preload.
+      // Look the video up before opening the modal so a typo'd-but-valid ID,
+      // or a still-live/upcoming broadcast pasted as a normal watch link
+      // (indistinguishable from a regular ID by shape alone), fails here
+      // with a message instead of opening a modal that then breaks on the
+      // expensive preload.
       try {
         const res = await fetch(`${API_BASE}/video/${videoId}`);
         if (!res.ok) throw new Error(String(res.status));
         const meta = await res.json();
+        if (meta.live_broadcast_content && meta.live_broadcast_content !== "none") {
+          pasteError.textContent = UNSUPPORTED_LINK_MESSAGES.live;
+          return;
+        }
         openModal({ id: videoId, title: meta.title, channel: meta.channel_title });
       } catch (err) {
         console.error("video lookup failed", err);

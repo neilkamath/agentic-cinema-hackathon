@@ -120,6 +120,10 @@ def fetch_video_metadata(video_id: str) -> dict:
         "description": snippet.get("description", ""),
         "channel_title": snippet.get("channelTitle", ""),
         "is_music": snippet.get("categoryId") == MUSIC_CATEGORY_ID,
+        # "live" or "upcoming" here means there's no finished transcript to
+        # sync insights against - catches a live/premiere link pasted as a
+        # normal watch URL, which looks identical to any other video ID.
+        "live_broadcast_content": snippet.get("liveBroadcastContent", "none"),
     }
 
 
