@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "yt-comment-curator-2026"
-  }
+  },
+  "targets": {
+    "yt-comment-curator-2026": {
+      "hosting": {
+        "sidecast": [
+          "sidecast"
+        ],
+        "default": [
+          "yt-comment-curator-2026"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
