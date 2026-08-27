@@ -1,33 +1,52 @@
-# YT Comment Curator
+# Sidecast
 
-A live, AI-curated comment feed for YouTube videos.
+A web app that plays a YouTube video next to a synced side panel.
+The panel shows real YouTube comments, unranked and exactly as YouTube returns them, merged with AI-generated insight cards.
+Each insight card is anchored to the real transcript moment it's grounded in, and its claim is checked against live web sources rather than asserted from model memory.
 
-Instead of scrolling past the video to read comments, this shows them in a
-scrolling side panel next to the video, like stream chat.
-An agent reranks incoming comments in real time: surfacing insightful ones,
-filtering spam and duplicates, and fading low-value comments rather than
-hiding them.
+Built for the [Agentic Cinema hackathon](https://agentic-cinema.devpost.com), Parallel partner track.
 
-Comments that reference a checkable claim or real-world context get grounded
-against live web sources and tagged confirmed or disputed.
-Comments with nothing to check are ranked on their own merits (insight,
-humor, engagement) with no tag - that's expected, not a failure state.
+## Live demo
 
-Built for the Agentic Cinema hackathon, Parallel partner track.
+https://sidecast.web.app
+
+## How it works
+
+- Comments come from the YouTube Data API v3, unranked, no algorithmic filtering.
+- A Gemini agent (via Google's Agent Development Kit) scans the video's transcript in chunks to find checkable, non-obvious claims, then places them at the transcript timestamp they actually came from.
+- Each claim is grounded against live web results via the Parallel Search API before being shown as an insight card.
+- The side panel scrolls in sync with video playback, so comments and insight cards line up with the moment they're about.
 
 ## Stack
 
-- Google Gemini (Vertex AI) for ranking and filtering
-- Google Agent Development Kit (ADK) for agent orchestration
-- Parallel Search API for grounding checkable claims
-- YouTube Data API v3 for comment data
-- Google Cloud Run for backend hosting
+- `google-adk` / `google-genai` (Gemini on Vertex AI) - insight generation and placement
+- `parallel-web` (Parallel Search API) - grounding
+- YouTube Data API v3 - comments and video metadata
+- `youtube-transcript-api` - transcript fetching
+- FastAPI backend on Google Cloud Run
+- Vanilla JS/HTML/CSS frontend (no build step) on Firebase Hosting
 
-## Status
+## Run locally
 
-Early development.
-See `docs/submission-checklist.md` for what's left before submission.
+**Backend**
 
-## Setup
+```
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill in GCP_PROJECT, YOUTUBE_API_KEY, PARALLEL_API_KEY
+uvicorn main:app --reload --port 8000
+```
 
-Coming soon.
+**Frontend**
+
+```
+cd frontend
+python3 -m http.server 8123
+```
+
+Then open `http://localhost:8123/index.html?api=http://localhost:8000` - the `api` param points the frontend at your local backend instead of the deployed one.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
