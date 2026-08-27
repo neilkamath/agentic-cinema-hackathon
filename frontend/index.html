@@ -13,6 +13,15 @@
   <link rel="stylesheet" href="https://unpkg.com/open-props" />
   <link rel="stylesheet" href="panel/panel.css" />
   <link rel="stylesheet" href="home.css" />
+  <script>
+    // Set before first paint so the entrance-animated elements (see home.css)
+    // start hidden instead of flashing visible-then-hidden-then-faded-in.
+    // The timeout is a hard fallback in case Motion's CDN import never
+    // resolves - the page must still reveal everything, just without the
+    // animation, rather than staying blank.
+    document.documentElement.classList.add("motion-pending");
+    setTimeout(() => document.documentElement.classList.remove("motion-pending"), 700);
+  </script>
 </head>
 <body>
   <img class="home-logo" src="favicon.svg" alt="" />
@@ -30,7 +39,7 @@
     />
     <button type="submit" id="paste-button">Go</button>
   </form>
-  <div class="paste-error" id="paste-error"></div>
+  <div class="paste-error" id="paste-error" role="status" aria-live="polite"></div>
 
   <div class="home-section-label">or pick one</div>
   <div class="video-grid" id="video-grid"></div>
@@ -51,6 +60,14 @@
 
   <script type="module">
     import { API_BASE } from "./panel/panel.js";
+
+    // Pinned version, per Motion's own docs, rather than @latest - this page
+    // has to keep working unattended through the hackathon judging window,
+    // so a CDN import shouldn't be able to silently change behavior underneath it.
+    const motionReady = import("https://cdn.jsdelivr.net/npm/motion@13.1.1/+esm").catch((err) => {
+      console.error("Motion failed to load, entrance/modal animations are skipped", err);
+      return null;
+    });
 
     const VIDEOS = [
       {
@@ -116,6 +133,25 @@
       });
       grid.appendChild(card);
     }
+
+    // Progressive enhancement: the page is fully usable the instant this
+    // script runs; the entrance animation just layers on top once Motion's
+    // CDN import resolves, however long that takes.
+    motionReady.then((motion) => {
+      document.documentElement.classList.remove("motion-pending");
+      if (!motion) return;
+      const { animate, stagger } = motion;
+      animate(
+        ".home-logo, .home-title, .home-tagline, .howto-link, .paste-form, .home-section-label",
+        { opacity: [0, 1], y: [10, 0] },
+        { duration: 0.4, delay: stagger(0.06), ease: "easeOut" }
+      );
+      animate(
+        ".video-card",
+        { opacity: [0, 1], y: [16, 0] },
+        { duration: 0.45, delay: stagger(0.06, { startDelay: 0.3 }), ease: "easeOut" }
+      );
+    });
 
     // Accepts the shapes people actually paste: a full watch URL, a share
     // link, a /shorts/ or /embed/ URL, or the bare 11-character ID.
@@ -186,6 +222,7 @@
     });
 
     const backdrop = document.getElementById("modal-backdrop");
+    const modalCard = document.getElementById("modal-card");
     const modalBack = document.getElementById("modal-back");
     const modalThumb = document.getElementById("modal-thumb");
     const modalThumbImg = document.getElementById("modal-thumb-img");
@@ -213,11 +250,27 @@
       modalStartButton.textContent = "Start Sidecast";
       modalBack.classList.remove("disabled");
       backdrop.classList.add("visible");
+
+      // A bare class-toggle opacity fade (still handled by CSS) reads as
+      // static; the card itself gets a springy pop on top of that so opening
+      // feels like something arriving, not just appearing.
+      motionReady.then((motion) => {
+        if (!motion) return;
+        motion.animate(
+          modalCard,
+          { opacity: [0, 1], scale: [0.92, 1] },
+          { type: "spring", bounce: 0.25, duration: 0.4 }
+        );
+      });
     }
 
     function closeModal() {
       if (isStarting) return;
       backdrop.classList.remove("visible");
+      motionReady.then((motion) => {
+        if (!motion) return;
+        motion.animate(modalCard, { opacity: [1, 0], scale: [1, 0.95] }, { duration: 0.15, ease: "easeIn" });
+      });
       activeVideo = null;
     }
 

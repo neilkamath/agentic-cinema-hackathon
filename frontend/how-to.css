@@ -12,6 +12,17 @@ body {
   left: var(--size-4);
 }
 
+/* Held at opacity 0 until Motion loads and runs the entrance animation (see
+   how-to.html) - the `html.motion-pending` gate has a hard timeout fallback
+   so a slow/blocked CDN still reveals everything, just without the animation. */
+html.motion-pending .home-logo,
+html.motion-pending .howto-title,
+html.motion-pending .howto-tagline,
+html.motion-pending .howto-step,
+html.motion-pending .howto-limitation {
+  opacity: 0;
+}
+
 .howto-page {
   max-width: 560px;
   margin: 0 auto;

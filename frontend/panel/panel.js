@@ -304,6 +304,7 @@ export function mountPanel(
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "fact-timeline-toggle";
+    toggle.setAttribute("aria-expanded", "false");
     toggle.innerHTML = `
       <span class="fact-timeline-count">${timestampedInsights.length + untimestampedInsights.length}</span>
       <span>Fact Timeline</span>
@@ -317,6 +318,7 @@ export function mountPanel(
     function closeTimeline() {
       timelineList.classList.remove("visible");
       toggle.classList.remove("active");
+      toggle.setAttribute("aria-expanded", "false");
     }
 
     // `headline` is written by the model from the video's own description,
@@ -413,6 +415,7 @@ export function mountPanel(
       const willBeVisible = !timelineList.classList.contains("visible");
       timelineList.classList.toggle("visible", willBeVisible);
       toggle.classList.toggle("active", willBeVisible);
+      toggle.setAttribute("aria-expanded", String(willBeVisible));
     });
 
     // It overlaps the feed now instead of living in its own reserved space,
@@ -669,6 +672,7 @@ export function mountPanel(
     state.sequence.splice(idx, 0, item);
 
     const node = renderComment(comment);
+    node.classList.add("comment-enter");
     renderedNodes.set(comment.id, node);
     const nextItem = state.sequence[idx + 1];
     const nextNode = nextItem ? renderedNodes.get(nextItem.id) : null;

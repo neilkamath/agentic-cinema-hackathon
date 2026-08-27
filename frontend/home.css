@@ -10,6 +10,19 @@ body {
   padding: var(--size-8) var(--size-4);
 }
 
+/* Held at opacity 0 until Motion loads and runs the entrance animation (see
+   index.html) - the `html.motion-pending` gate has a hard timeout fallback
+   so a slow/blocked CDN still reveals everything, just without the animation. */
+html.motion-pending .home-logo,
+html.motion-pending .home-title,
+html.motion-pending .home-tagline,
+html.motion-pending .howto-link,
+html.motion-pending .paste-form,
+html.motion-pending .home-section-label,
+html.motion-pending .video-card {
+  opacity: 0;
+}
+
 .home-logo {
   width: 56px;
   height: 56px;

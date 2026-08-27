@@ -13,6 +13,10 @@
   <link rel="stylesheet" href="https://unpkg.com/open-props" />
   <link rel="stylesheet" href="panel/panel.css" />
   <link rel="stylesheet" href="how-to.css" />
+  <script>
+    document.documentElement.classList.add("motion-pending");
+    setTimeout(() => document.documentElement.classList.remove("motion-pending"), 700);
+  </script>
 </head>
 <body>
   <a class="icon-back-button" href="index.html" aria-label="Back to Sidecast" title="Back to Sidecast">&larr;</a>
@@ -80,5 +84,31 @@
       </p>
     </div>
   </div>
+
+  <script type="module">
+    import("https://cdn.jsdelivr.net/npm/motion@13.1.1/+esm")
+      .then(({ animate, stagger }) => {
+        document.documentElement.classList.remove("motion-pending");
+        animate(
+          ".home-logo, .howto-title, .howto-tagline",
+          { opacity: [0, 1], y: [10, 0] },
+          { duration: 0.4, delay: stagger(0.06), ease: "easeOut" }
+        );
+        animate(
+          ".howto-step",
+          { opacity: [0, 1], x: [-14, 0] },
+          { duration: 0.4, delay: stagger(0.08, { startDelay: 0.25 }), ease: "easeOut" }
+        );
+        animate(
+          ".howto-limitation",
+          { opacity: [0, 1], y: [12, 0] },
+          { duration: 0.4, delay: stagger(0.1, { startDelay: 0.75 }), ease: "easeOut" }
+        );
+      })
+      .catch((err) => {
+        console.error("Motion failed to load, entrance animation is skipped", err);
+        document.documentElement.classList.remove("motion-pending");
+      });
+  </script>
 </body>
 </html>
